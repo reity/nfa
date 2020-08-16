@@ -13,7 +13,6 @@ import doctest
 class nfa(dict):
     """
     Class for a non-deterministic finite automaton.
-
     >>> accept = nfa()
     >>> abc = nfa({'a':accept, 'b':accept, 'c':accept})
     >>> abc('a')
@@ -25,18 +24,30 @@ class nfa(dict):
     False
     >>> d_abc('c')
     False
+    >>> d_abc('b')
+    False
     >>> f_star_e_d_abc = nfa({'e': d_abc})
     >>> f_star_e_d_abc('edb')
     True
     >>> f_star_e_d_abc['f'] = f_star_e_d_abc
     >>> all(f_star_e_d_abc(('f'*i) + 'edb') for i in range(5))
     True
+    >>> f_star_e_d_abc['f'] = [f_star_e_d_abc]
+    >>> all(f_star_e_d_abc(('f'*i) + 'edb') for i in range(5))
+    True
+    >>> f_star_e_d_abc['f'] = [f_star_e_d_abc, abc]
+    >>> all(f_star_e_d_abc(('f'*5) + x) for i in range(1,5) for x in 'abc')
+    True
     """
-    def __call__(self, string):
+    def __call__(self: nfa, string) -> bool:
         if len(string) == 0:
             return len(self) == 0
         elif string[0] in self:
-            return self[string[0]](string[1:])
+            nfas_ = self[string[0]]
+            if isinstance(nfas_, (tuple, list, set, frozenset)):
+                return any(nfa_(string[1:]) for nfa_ in nfas_)
+            else:
+                return nfas_(string[1:])
         else:
             return False
 
