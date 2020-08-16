@@ -25,6 +25,12 @@ class nfa(dict):
     False
     >>> d_abc('c')
     False
+    >>> f_star_e_d_abc = nfa({'e': d_abc})
+    >>> f_star_e_d_abc('edb')
+    True
+    >>> f_star_e_d_abc['f'] = f_star_e_d_abc
+    >>> all(f_star_e_d_abc(('f'*i) + 'edb') for i in range(5))
+    True
     """
     def __call__(self, string):
         if len(string) == 0:
@@ -35,4 +41,4 @@ class nfa(dict):
             return False
 
 if __name__ == "__main__":
-    doctest.testmod()
+    doctest.testmod() # pragma: no cover
