@@ -9,10 +9,14 @@ serve as edges).
 
 from __future__ import annotations
 import doctest
+from collections.abc import Iterable
+from itertools import chain
 
 class nfa(dict):
     """
-    Class for a non-deterministic finite automaton.
+    Class for a non-deterministic finite automaton
+    (also an individual state node in the NFA state
+    graph).
     >>> accept = nfa()
     >>> abc = nfa({'a':accept, 'b':accept, 'c':accept})
     >>> abc('a')
@@ -38,18 +42,51 @@ class nfa(dict):
     >>> f_star_e_d_abc['f'] = [f_star_e_d_abc, abc]
     >>> all(f_star_e_d_abc(('f'*5) + x) for i in range(1,5) for x in 'abc')
     True
+    >>> b_star_c = nfa({'c':accept})
+    >>> b_star_c['b'] = b_star_c
+    >>> b_star_c('bbbbc')
+    True
+    >>> b_star_c(['b', 'b', 'b', 'b', 'c'])
+    True
+    >>> b_star_c((c for c in ['b', 'b', 'b', 'b', 'c']))
+    True
+    >>> accept(123)
+    Traceback (most recent call last):
+      ...
+    ValueError: input must be an iterable
     """
-    def __call__(self: nfa, string) -> bool:
-        if len(string) == 0:
+    def __call__(self: nfa, string, _string=None) -> bool:
+        if not isinstance(string, Iterable):
+            raise ValueError('input must be an iterable')
+        string = iter(string)
+
+        # Reconstruction of string returned back to invocation.
+        _string = {} if _string is None else _string
+
+        # Attempt to obtain the next symbol or finish search.
+        try:
+            symbol = next(string) # Obtain the next symbol in the string.
+            if symbol in self:
+                nfas_ = self[symbol] # Consume one symbol.
+
+                # There are multiple branches.
+                if isinstance(nfas_, (tuple, list, set, frozenset)):
+                    _string[()] = string # Set up reconstructible string.
+                    for nfa_ in nfas_: # For each possible branch.
+                        if nfa_(string, _string):
+                            return True
+                        # Restored string from call for next iteration.
+                        string = _string[()]
+                else:
+                    if nfas_(string):
+                        return True
+
+            _string[()] = chain([symbol], string) # Restore symbol.
+            return False # No accepting path found.
+
+        except StopIteration:
+            _string[()] = [] # Empty string for restoration.
             return len(self) == 0
-        elif string[0] in self:
-            nfas_ = self[string[0]]
-            if isinstance(nfas_, (tuple, list, set, frozenset)):
-                return any(nfa_(string[1:]) for nfa_ in nfas_)
-            else:
-                return nfas_(string[1:])
-        else:
-            return False
 
 if __name__ == "__main__":
     doctest.testmod() # pragma: no cover
