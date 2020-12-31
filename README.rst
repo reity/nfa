@@ -13,6 +13,9 @@ Library for defining and working with native Python implementations of non-deter
 .. |travis| image:: https://travis-ci.com/reity/nfa.svg?branch=master
    :target: https://travis-ci.com/reity/nfa
 
+.. |coveralls| image:: https://coveralls.io/repos/github/reity/nfa/badge.svg?branch=master
+   :target: https://coveralls.io/github/reity/nfa?branch=master
+
 Package Installation and Usage
 ------------------------------
 The package is available on PyPI::
