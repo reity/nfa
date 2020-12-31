@@ -4,11 +4,14 @@ nfa
 
 Library for defining and working with native Python implementations of non-deterministic finite automata (NFAs).
 
-|pypi|
+|pypi| |travis|
 
 .. |pypi| image:: https://badge.fury.io/py/nfa.svg
    :target: https://badge.fury.io/py/nfa
    :alt: PyPI version and link.
+
+.. |travis| image:: https://travis-ci.com/reity/nfa.svg?branch=master
+   :target: https://travis-ci.com/reity/nfa
 
 Package Installation and Usage
 ------------------------------
