@@ -35,6 +35,9 @@ class nfa(dict):
     >>> zero = nfa({0:one, 2:three})
     >>> (zero([0, 1, 2, 3]), zero([2, 3]), zero([2, 2, 3]))
     (True, True, False)
+    >>> zero.compile()
+    >>> (zero([0, 1, 2, 3]), zero([2, 3]), zero([2, 2, 3]))
+    (True, True, False)
     >>> abc = nfa({'a':accept, 'b':accept, 'c':accept})
     >>> abc('a')
     True
@@ -115,6 +118,31 @@ class nfa(dict):
                         cont = True
         return nfas
 
+    def compile(self: nfa, _compiled=None):
+        """
+        Compile NFA represented by this instance (i.e., acting as the initial
+        state/node) into a transition table and save it as a private attribute.
+        """
+        compiled = {} if _compiled is None else _compiled
+
+        # Update the transition table with entries corresponding to
+        # this node.
+        updated = False
+        for (symbol, nfa_) in self.items():
+            if (symbol, id(self)) not in compiled:
+                # The accepting terminal state is marked by `None`.
+                compiled[(symbol, id(self))] = None if len(nfa_) == 0 else id(nfa_)
+                updated = True
+
+        # If any updates were made to the transition table, compile recursively.
+        if updated:
+            for (symbol, nfa_) in self.items():
+                nfa_.compile(_compiled=compiled)
+
+        # If we are at the root, save the transition table as an attribute.
+        if _compiled is None:
+            setattr(self, "_compiled", compiled)
+
     def __call__(self: nfa, string, _string=None) -> bool:
         """
         Determine whether a "string" (i.e., iterable) of symbols
@@ -123,6 +151,28 @@ class nfa(dict):
         if not isinstance(string, Iterable):
             raise ValueError('input must be an iterable')
         string = iter(string)
+
+        # If the NFA represented by this instance has been compiled, attempt
+        # to match the supplied string via the compiled transition table.
+
+        if hasattr(self, "_compiled") and self._compiled is not None: # pylint: disable=E1101
+            id_ = id(self)
+            while True:
+                try:
+                    # Obtain the next symbol in the string.
+                    symbol = next(string)
+
+                    # If no matching subsequent state/node exists, do not accept.
+                    if not (symbol, id_) in self._compiled: # pylint: disable=E1101
+                        return False
+
+                    # Determine next state/node.
+                    id_ = self._compiled[(symbol, id_)] # pylint: disable=E1101
+                except StopIteration:
+                    return id_ is None # Accepting terminal state/node.
+
+        # Since there is no compiled transition table, attempt to match
+        # the supplied string via a recursive traversal through the nodes.
 
         # Reconstruction of string returned back to invocation.
         _string = {} if _string is None else _string
