@@ -35,9 +35,9 @@ class nfa(dict):
     >>> zero = nfa({0:one, 2:three})
     >>> (zero([0, 1, 2, 3]), zero([2, 3]), zero([2, 2, 3]))
     (True, True, False)
-    >>> zero.compile()
-    >>> (zero([0, 1, 2, 3]), zero([2, 3]), zero([2, 2, 3]))
-    (True, True, False)
+    >>> zero = nfa({0:one, epsilon():[two, three]}).compile()
+    >>> zero([0, 1, 2, 3]), zero([2, 3]), zero([2, 3]), zero([2, 2, 3])
+    (True, True, True, False)
     >>> abc = nfa({'a':accept, 'b':accept, 'c':accept})
     >>> abc('a')
     True
@@ -128,20 +128,32 @@ class nfa(dict):
         # Update the transition table with entries corresponding to
         # this node.
         updated = False
-        for (symbol, nfa_) in self.items():
-            if (symbol, id(self)) not in compiled:
-                # The accepting terminal state is marked by `None`.
-                compiled[(symbol, id(self))] = None if len(nfa_) == 0 else id(nfa_)
-                updated = True
+        closure = self._epsilon_closure()
+        for nfa__ in closure.values():
+            for symbol in nfa__:
+                if not isinstance(symbol, epsilon):
+                    for nfa_ in nfa__ @ symbol:
+                        # Add entry for the current state and symbol if it is not present.
+                        if (symbol, id(self)) not in compiled:
+                            compiled[(symbol, id(self))] = set()
+
+                        # The accepting terminal state is marked by `None`.
+                        compiled[(symbol, id(self))] |= {None if len(nfa_) == 0 else id(nfa_)}
+                        updated = True
 
         # If any updates were made to the transition table, compile recursively.
         if updated:
-            for (symbol, nfa_) in self.items():
-                nfa_.compile(_compiled=compiled)
+            for nfa__ in closure.values():
+                for symbol in nfa__:
+                    if not isinstance(symbol, epsilon):
+                        for nfa_ in nfa__ @ symbol:
+                            nfa_.compile(_compiled=compiled)
 
-        # If we are at the root, save the transition table as an attribute.
+        # If we are at the root invocation, save the transition table as an attribute.
         if _compiled is None:
             setattr(self, "_compiled", compiled)
+
+        return self
 
     def __call__(self: nfa, string, _string=None) -> bool:
         """
@@ -156,20 +168,26 @@ class nfa(dict):
         # to match the supplied string via the compiled transition table.
 
         if hasattr(self, "_compiled") and self._compiled is not None: # pylint: disable=E1101
-            id_ = id(self)
+            ids_ = set([id(self)])
             while True:
                 try:
                     # Obtain the next symbol in the string.
                     symbol = next(string)
 
+                    # Collect the list of subsequent states/nodes.
+                    ids__ = set()
+                    for id_ in ids_:
+                        if (symbol, id_) in self._compiled: # pylint: disable=E1101
+                            ids__ |= set(self._compiled[(symbol, id_)]) # pylint: disable=E1101
+
                     # If no matching subsequent state/node exists, do not accept.
-                    if not (symbol, id_) in self._compiled: # pylint: disable=E1101
+                    if len(ids__) == 0:
                         return False
 
-                    # Determine next state/node.
-                    id_ = self._compiled[(symbol, id_)] # pylint: disable=E1101
+                    # Update list of working states/nodes.
+                    ids_ = ids__
                 except StopIteration:
-                    return id_ is None # Accepting terminal state/node.
+                    return None in ids_ # Accepting terminal state/node.
 
         # Since there is no compiled transition table, attempt to match
         # the supplied string via a recursive traversal through the nodes.
