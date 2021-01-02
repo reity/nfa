@@ -91,6 +91,20 @@ class nfa(dict):
 
         return list()
 
+    def _epsilon_closure(self: nfa):
+        """
+        Collect all possible branches reachable via empty transitions.
+        """
+        (nfas, cont, e) = ({id(self): self}, True, epsilon()) # pylint: disable=C0103
+        while cont:
+            cont = False
+            for nfa_ in list(nfas.values()):
+                for nfa__ in nfa_ @ e:
+                    if id(nfa__) not in nfas:
+                        nfas[id(nfa__)] = nfa__
+                        cont = True
+        return nfas
+
     def __call__(self: nfa, string, _string=None) -> bool:
         """
         Determine whether a "string" (i.e., iterable) of symbols
@@ -109,22 +123,13 @@ class nfa(dict):
             symbol = next(string)
 
             # Collect all possible branches reachable via empty transitions.
-            (nfas, cont, e) = ({id(self): self}, True, epsilon()) # pylint: disable=C0103
-            while cont:
-                cont = False
-                for nfa_ in list(nfas.values()):
-                    for nfa__ in nfa_ @ e:
-                        if id(nfa__) not in nfas:
-                            nfas[id(nfa__)] = nfa__
-                            cont = True
-
             # For each branch, find all branches corresponding to the symbol.
-            for nfa_ in nfas.values():
+            for nfa_ in self._epsilon_closure().values():
                 if symbol in nfa_:
                     nfas_ = nfa_ @ symbol # Consume one symbol.
                     _string[()] = string # Set up reconstructible string.
                     for nfa__ in nfas_: # For each possible branch.
-                        if nfa__(string, _string):
+                        if nfa__(string, _string): # pylint: disable=W0212
                             return True
                         # Restored string from call for next iteration.
                         string = _string[()]
