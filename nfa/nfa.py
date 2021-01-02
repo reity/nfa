@@ -29,9 +29,17 @@ class nfa(dict):
     graph).
 
     >>> accept = nfa()
+    >>> three = nfa({3:accept})
+    >>> two = nfa({2:three})
+    >>> one = nfa({1:two})
+    >>> zero = nfa({0:one, 2:three})
+    >>> (zero([0, 1, 2, 3]), zero([2, 3]), zero([2, 2, 3]))
+    (True, True, False)
     >>> abc = nfa({'a':accept, 'b':accept, 'c':accept})
     >>> abc('a')
     True
+    >>> (abc('ab'), abc(iter('ab')))
+    (False, False)
     >>> d_abc = nfa({'d': abc})
     >>> d_abc('db')
     True
@@ -53,10 +61,12 @@ class nfa(dict):
     >>> f_star_e_d_abc['f'] = [f_star_e_d_abc, abc]
     >>> all(f_star_e_d_abc(('f'*5) + x) for i in range(1,5) for x in 'abc')
     True
+    >>> all(f_star_e_d_abc(iter(('f'*5) + x)) for i in range(1,5) for x in 'abc')
+    True
     >>> b_star_c = nfa({'c':accept})
     >>> b_star_c['b'] = b_star_c
-    >>> b_star_c('bbbbc')
-    True
+    >>> (b_star_c('bbbbc'), b_star_c(iter('bbbbc')))
+    (True, True)
     >>> b_star_c(['b', 'b', 'b', 'b', 'c'])
     True
     >>> b_star_c((c for c in ['b', 'b', 'b', 'b', 'c']))
