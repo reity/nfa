@@ -42,6 +42,13 @@ class nfa(dict):
     (4, 2, 1, None)
     >>> (zero([0, 1, 2, 3, 4], full=False), zero([2, 3, 4], full=False), zero([2], full=False))
     (4, 2, None)
+    >>> zeros = nfa({0:[accept]})
+    >>> zeros[0].append(zeros)
+    >>> all(zeros([0]*i) == i for i in range(1, 10))
+    True
+    >>> zeros = zeros.compile()
+    >>> all(zeros([0]*i) == i for i in range(1, 10))
+    True
     >>> abc = nfa({'a':accept, 'b':accept, 'c':accept})
     >>> abc('a')
     1
@@ -122,12 +129,17 @@ class nfa(dict):
                         cont = True
         return nfas
 
-    def compile(self: nfa, _compiled=None):
+    def compile(self: nfa, _compiled=None, _ids=None):
         """
         Compile NFA represented by this instance (i.e., acting as the initial
         state/node) into a transition table and save it as a private attribute.
         """
         compiled = {} if _compiled is None else _compiled
+        ids = [] if _ids is None else _ids
+
+        # Cut off recursion if this state/node has already been visited.
+        if id(self) in ids:
+            return self
 
         # Update the transition table with entries corresponding to
         # this node.
@@ -151,7 +163,7 @@ class nfa(dict):
                 for symbol in nfa__:
                     if not isinstance(symbol, epsilon):
                         for nfa_ in nfa__ @ symbol:
-                            nfa_.compile(_compiled=compiled)
+                            nfa_.compile(_compiled=compiled, _ids=(ids + [id(self)]))
 
         # If we are at the root invocation, save the transition table as an attribute.
         if _compiled is None:
