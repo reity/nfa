@@ -34,56 +34,56 @@ class nfa(dict):
     >>> one = nfa({1:two})
     >>> zero = nfa({0:one, 2:three})
     >>> (zero([0, 1, 2, 3]), zero([2, 3]), zero([2, 2, 3]))
-    (True, True, False)
+    (4, 2, None)
     >>> zero = nfa({0:one, epsilon():[two, three]}).compile()
-    >>> zero([0, 1, 2, 3]), zero([2, 3]), zero([2, 3]), zero([2, 2, 3])
-    (True, True, True, False)
+    >>> zero([0, 1, 2, 3]), zero([2, 3]), zero([3]), zero([2, 2, 3])
+    (4, 2, 1, None)
     >>> abc = nfa({'a':accept, 'b':accept, 'c':accept})
     >>> abc('a')
-    True
+    1
     >>> (abc('ab'), abc(iter('ab')))
-    (False, False)
+    (None, None)
     >>> d_abc = nfa({'d': abc})
     >>> d_abc('db')
+    2
+    >>> d_abc('d') is None
     True
-    >>> d_abc('d')
-    False
-    >>> d_abc('c')
-    False
-    >>> d_abc('b')
-    False
+    >>> d_abc('c') is None
+    True
+    >>> d_abc('b') is None
+    True
     >>> f_star_e_d_abc = nfa({'e': d_abc})
     >>> f_star_e_d_abc('edb')
-    True
+    3
     >>> f_star_e_d_abc['f'] = f_star_e_d_abc
-    >>> all(f_star_e_d_abc(('f'*i) + 'edb') for i in range(5))
+    >>> all(f_star_e_d_abc(('f'*i) + 'edb') == i + 3 for i in range(5))
     True
     >>> f_star_e_d_abc['f'] = [f_star_e_d_abc]
-    >>> all(f_star_e_d_abc(('f'*i) + 'edb') for i in range(5))
+    >>> all(f_star_e_d_abc(('f'*i) + 'edb') == i + 3 for i in range(5))
     True
     >>> f_star_e_d_abc['f'] = [f_star_e_d_abc, abc]
-    >>> all(f_star_e_d_abc(('f'*5) + x) for i in range(1,5) for x in 'abc')
+    >>> all(f_star_e_d_abc(('f'*i) + x) == i + 1 for i in range(1,5) for x in 'abc')
     True
-    >>> all(f_star_e_d_abc(iter(('f'*5) + x)) for i in range(1,5) for x in 'abc')
-    True
+    >>> set(f_star_e_d_abc(iter(('f'*5) + x))  for _ in range(1,5) for x in 'abc')
+    {6}
     >>> b_star_c = nfa({'c':accept})
     >>> b_star_c['b'] = b_star_c
     >>> (b_star_c('bbbbc'), b_star_c(iter('bbbbc')))
-    (True, True)
+    (5, 5)
     >>> b_star_c(['b', 'b', 'b', 'b', 'c'])
-    True
+    5
     >>> b_star_c((c for c in ['b', 'b', 'b', 'b', 'c']))
-    True
+    5
     >>> e = epsilon()
     >>> b_star_c[e] = abc
     >>> (b_star_c('a'), b_star_c('b'), b_star_c('c'), b_star_c('d'))
-    (True, True, True, False)
+    (1, 1, 1, None)
     >>> abc[e] = abc
     >>> (abc('a'), abc('b'), abc('c'), abc('d'))
-    (True, True, True, False)
+    (1, 1, 1, None)
     >>> b_star_c[e] = [abc, b_star_c]
     >>> (b_star_c('a'), b_star_c('b'), b_star_c('c'), b_star_c('d'))
-    (True, True, True, False)
+    (1, 1, 1, None)
     >>> accept(123)
     Traceback (most recent call last):
       ...
@@ -155,7 +155,7 @@ class nfa(dict):
 
         return self
 
-    def __call__(self: nfa, string, _string=None) -> bool:
+    def __call__(self: nfa, string, _string=None, _length=0) -> bool:
         """
         Determine whether a "string" (i.e., iterable) of symbols
         is accepted by the `nfa` instance.
@@ -173,6 +173,7 @@ class nfa(dict):
                 try:
                     # Obtain the next symbol in the string.
                     symbol = next(string)
+                    _length += 1
 
                     # Collect the list of subsequent states/nodes.
                     ids__ = set()
@@ -182,12 +183,12 @@ class nfa(dict):
 
                     # If no matching subsequent state/node exists, do not accept.
                     if len(ids__) == 0:
-                        return False
+                        return None
 
                     # Update list of working states/nodes.
                     ids_ = ids__
                 except StopIteration:
-                    return None in ids_ # Accepting terminal state/node.
+                    return _length if None in ids_ else None # Accepting terminal state/node.
 
         # Since there is no compiled transition table, attempt to match
         # the supplied string via a recursive traversal through the nodes.
@@ -207,17 +208,19 @@ class nfa(dict):
                     nfas_ = nfa_ @ symbol # Consume one symbol.
                     _string[()] = string # Set up reconstructible string.
                     for nfa__ in nfas_: # For each possible branch.
-                        if nfa__(string, _string): # pylint: disable=W0212
-                            return True
+                        length = nfa__(string, _string, _length + 1) # pylint: disable=W0212
+                        if length is not None:
+                            return length
+
                         # Restored string from call for next iteration.
                         string = _string[()]
 
             _string[()] = chain([symbol], string) # Restore symbol.
-            return False # No accepting path found.
+            return None # No accepting path found.
 
         except StopIteration:
             _string[()] = [] # Empty string for restoration.
-            return len(self) == 0
+            return _length if len(self) == 0 else None
 
 # Use symbol for sole instance of singleton class.
 _epsilon = epsilon()
