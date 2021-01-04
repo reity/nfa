@@ -35,9 +35,13 @@ class nfa(dict):
     >>> zero = nfa({0:one, 2:three})
     >>> (zero([0, 1, 2, 3]), zero([2, 3]), zero([2, 2, 3]))
     (4, 2, None)
+    >>> (zero([0, 1, 2, 3, 4], full=False), zero([2, 3, 4], full=False), zero([2], full=False))
+    (4, 2, None)
     >>> zero = nfa({0:one, epsilon():[two, three]}).compile()
-    >>> zero([0, 1, 2, 3]), zero([2, 3]), zero([3]), zero([2, 2, 3])
+    >>> (zero([0, 1, 2, 3]), zero([2, 3]), zero([3]), zero([2, 2, 3]))
     (4, 2, 1, None)
+    >>> (zero([0, 1, 2, 3, 4], full=False), zero([2, 3, 4], full=False), zero([2], full=False))
+    (4, 2, None)
     >>> abc = nfa({'a':accept, 'b':accept, 'c':accept})
     >>> abc('a')
     1
@@ -155,7 +159,7 @@ class nfa(dict):
 
         return self
 
-    def __call__(self: nfa, string, _string=None, _length=0) -> bool:
+    def __call__(self: nfa, string, full: bool=True, _string=None, _length=0) -> bool:
         """
         Determine whether a "string" (i.e., iterable) of symbols
         is accepted by the `nfa` instance.
@@ -181,9 +185,16 @@ class nfa(dict):
                         if (symbol, id_) in self._compiled: # pylint: disable=E1101
                             ids__ |= set(self._compiled[(symbol, id_)]) # pylint: disable=E1101
 
-                    # If no matching subsequent state/node exists, do not accept.
+                    # If no matching subsequent state/node exists but we have not yet
+                    # consumed at least one symbol, do not accept.
                     if len(ids__) == 0:
                         return None
+
+                    # If we have reached an accept state/node and cannot progress any other
+                    # way based on the current symbol, accept if a full match is not required.
+                    # Otherwise, this is a failure.
+                    if len(ids__) == 1 and None in ids__ and not full:
+                        return _length
 
                     # Update list of working states/nodes.
                     ids_ = ids__
@@ -201,6 +212,12 @@ class nfa(dict):
             # Obtain the next symbol in the string.
             symbol = next(string)
 
+            # If we are at an accept node/state (at this point there are
+            # more symbols in the string), only accept if a full match is
+            # not required.
+            if len(self) == 0 and not full:
+                return _length
+
             # Collect all possible branches reachable via empty transitions.
             # For each branch, find all branches corresponding to the symbol.
             for nfa_ in self._epsilon_closure().values():
@@ -208,7 +225,12 @@ class nfa(dict):
                     nfas_ = nfa_ @ symbol # Consume one symbol.
                     _string[()] = string # Set up reconstructible string.
                     for nfa__ in nfas_: # For each possible branch.
-                        length = nfa__(string, _string, _length + 1) # pylint: disable=W0212
+                        length = nfa__(
+                            string,
+                            full=full,
+                            _string=_string,
+                            _length=(_length + 1) # pylint: disable=W0212
+                        )
                         if length is not None:
                             return length
 
