@@ -10,7 +10,7 @@ serve as edges).
 from __future__ import annotations
 import doctest
 from collections.abc import Iterable
-from itertools import chain
+from reiter import reiter
 
 class epsilon:
     """
@@ -171,14 +171,14 @@ class nfa(dict):
 
         return self
 
-    def __call__(self: nfa, string, full: bool=True, _string=None, _length=0) -> bool:
+    def __call__(self: nfa, string, full: bool=True, _length=0) -> bool:
         """
         Determine whether a "string" (i.e., iterable) of symbols
         is accepted by the `nfa` instance.
         """
-        if not isinstance(string, Iterable):
+        if not isinstance(string, (Iterable, reiter)):
             raise ValueError('input must be an iterable')
-        string = iter(string)
+        string = reiter(string)
 
         # If the NFA represented by this instance has been compiled, attempt
         # to match the supplied string via the compiled transition table.
@@ -188,7 +188,7 @@ class nfa(dict):
             while True:
                 try:
                     # Obtain the next symbol in the string.
-                    symbol = next(string)
+                    symbol = string[_length]
                     _length += 1
 
                     # Collect the list of subsequent states/nodes.
@@ -210,19 +210,16 @@ class nfa(dict):
 
                     # Update list of working states/nodes.
                     ids_ = ids__
-                except StopIteration:
-                    return _length if None in ids_ else None # Accepting terminal state/node.
+                except (StopIteration, IndexError):
+                    return _length if None in ids_ else None # Accept if terminal state/node found.
 
         # Since there is no compiled transition table, attempt to match
         # the supplied string via a recursive traversal through the nodes.
 
-        # Reconstruction of string returned back to invocation.
-        _string = {} if _string is None else _string
-
         # Attempt to obtain the next symbol or end the search.
         try:
             # Obtain the next symbol in the string.
-            symbol = next(string)
+            symbol = string[_length]
 
             # If we are at an accept node/state (at this point there are
             # more symbols in the string), only accept if a full match is
@@ -235,25 +232,18 @@ class nfa(dict):
             for nfa_ in self._epsilon_closure().values():
                 if symbol in nfa_:
                     nfas_ = nfa_ @ symbol # Consume one symbol.
-                    _string[()] = string # Set up reconstructible string.
                     for nfa__ in nfas_: # For each possible branch.
                         length = nfa__(
                             string,
                             full=full,
-                            _string=_string,
                             _length=(_length + 1) # pylint: disable=W0212
                         )
                         if length is not None:
                             return length
 
-                        # Restored string from call for next iteration.
-                        string = _string[()]
-
-            _string[()] = chain([symbol], string) # Restore symbol.
             return None # No accepting path found.
 
-        except StopIteration:
-            _string[()] = [] # Empty string for restoration.
+        except (StopIteration, IndexError):
             return _length if len(self) == 0 else None
 
 # Use symbol for sole instance of singleton class.
