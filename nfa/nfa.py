@@ -46,8 +46,12 @@ class nfa(dict):
     >>> zeros[0].append(zeros)
     >>> all(zeros([0]*i) == i for i in range(1, 10))
     True
+    >>> all(zeros([0]*i, full=False) == i for i in range(1, 10))
+    True
     >>> zeros = zeros.compile()
     >>> all(zeros([0]*i) == i for i in range(1, 10))
+    True
+    >>> all(zeros([0]*i, full=False) == i for i in range(1, 10))
     True
     >>> abc = nfa({'a':accept, 'b':accept, 'c':accept})
     >>> abc('a')
@@ -227,8 +231,10 @@ class nfa(dict):
             if len(self) == 0 and not full:
                 return _length
 
-            # Collect all possible branches reachable via empty transitions.
+            # Examine all possible branches reachable via empty transitions.
             # For each branch, find all branches corresponding to the symbol.
+            # Collect the lengths of the matches and return the largest.
+            lengths = []
             for nfa_ in self._epsilon_closure().values():
                 if symbol in nfa_:
                     nfas_ = nfa_ @ symbol # Consume one symbol.
@@ -239,7 +245,10 @@ class nfa(dict):
                             _length=(_length + 1) # pylint: disable=W0212
                         )
                         if length is not None:
-                            return length
+                            lengths.append(length)
+
+            if len(lengths) > 0:
+                return max(lengths)
 
             return None # No accepting path found.
 
