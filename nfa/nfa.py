@@ -1,7 +1,7 @@
-"""Data structure for non-deterministic finite automata.
+"""Data structure for nondeterministic finite automata.
 
 Python data structure derived from dict that can represent
-non-deterministic finite automata (NFAs) as an ensemble of
+nondeterministic finite automata (NFAs) as an ensemble of
 dictionaries (where dictionary instances serve as nodes,
 dictionary keys serve as edge labels, and dictionary values
 serve as edges).
@@ -24,7 +24,7 @@ class epsilon:
 
 class nfa(dict):
     """
-    Class for a non-deterministic finite automaton
+    Class for a nondeterministic finite automaton
     (also an individual state node in the NFA state
     graph).
 

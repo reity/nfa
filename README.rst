@@ -2,9 +2,9 @@
 nfa
 ===
 
-Library for defining and working with native Python implementations of non-deterministic finite automata (NFAs).
+Library for defining and working with native Python implementations of nondeterministic finite automata (NFAs).
 
-|pypi| |travis|
+|pypi| |travis| |coveralls|
 
 .. |pypi| image:: https://badge.fury.io/py/nfa.svg
    :target: https://badge.fury.io/py/nfa
