@@ -42,6 +42,15 @@ class nfa(dict):
     (4, 2, 1, None)
     >>> (zero([0, 1, 2, 3, 4], full=False), zero([2, 3, 4], full=False), zero([2], full=False))
     (4, 2, None)
+    >>> zeros = nfa({epsilon():[accept]})
+    >>> zeros[0] = [zeros]
+    >>> all(zeros([0]*i) == i for i in range(10))
+    True
+    >>> zeros = nfa({epsilon():[accept]})
+    >>> zeros[0] = [zeros]
+    >>> zeros = zeros.compile()
+    >>> all(zeros([0]*i) == i for i in range(10))
+    True
     >>> zeros = nfa({0:[accept]})
     >>> zeros[0].append(zeros)
     >>> all(zeros([0]*i) == i for i in range(1, 10))
@@ -150,6 +159,9 @@ class nfa(dict):
         updated = False
         closure = self._epsilon_closure()
         for nfa__ in closure.values():
+            if len(nfa__) == 0:
+                compiled[id(self)] = None
+
             for symbol in nfa__:
                 if not isinstance(symbol, epsilon):
                     for nfa_ in nfa__ @ symbol:
@@ -189,6 +201,11 @@ class nfa(dict):
 
         if hasattr(self, "_compiled") and self._compiled is not None: # pylint: disable=E1101
             ids_ = set([id(self)])
+
+            # The initial state/node may have been an accept state/node.
+            if id(self) in self._compiled: # pylint: disable=E1101
+                ids_ |= {None}
+
             while True:
                 try:
                     # Obtain the next symbol in the string.
@@ -198,6 +215,11 @@ class nfa(dict):
                     # Collect the list of subsequent states/nodes.
                     ids__ = set()
                     for id_ in ids_:
+                        # The initial state/node may have been an accept state/node.
+                        if id_ in self._compiled: # pylint: disable=E1101
+                            ids__ |= {None}
+
+                        # Check table for given symbol and state/node.
                         if (symbol, id_) in self._compiled: # pylint: disable=E1101
                             ids__ |= set(self._compiled[(symbol, id_)]) # pylint: disable=E1101
 
@@ -219,13 +241,17 @@ class nfa(dict):
 
         # Since there is no compiled transition table, attempt to match
         # the supplied string via a recursive traversal through the nodes.
+        # Get the set of all states/nodes and check if any of them are an accept state.
+        closure = self._epsilon_closure().values()
 
         # Attempt to obtain the next symbol or end the search.
+        # The length of each successful match will be collected so that the longest
+        # match can be chosen (e.g., if matching the full string is not required).
         try:
             # Obtain the next symbol in the string.
             symbol = string[_length]
 
-            # If we are at an accept node/state (at this point there are
+            # If we are at an accept state/node (at this point there are
             # more symbols in the string), only accept if a full match is
             # not required.
             if len(self) == 0 and not full:
@@ -235,7 +261,7 @@ class nfa(dict):
             # For each branch, find all branches corresponding to the symbol.
             # Collect the lengths of the matches and return the largest.
             lengths = []
-            for nfa_ in self._epsilon_closure().values():
+            for nfa_ in closure:
                 if symbol in nfa_:
                     nfas_ = nfa_ @ symbol # Consume one symbol.
                     for nfa__ in nfas_: # For each possible branch.
@@ -253,6 +279,11 @@ class nfa(dict):
             return None # No accepting path found.
 
         except (StopIteration, IndexError):
+            # If there are no more symbols in the string and an accept
+            # state/node is immediately reachable, accept.
+            if any(len(nfa_) == 0 for nfa_ in closure):
+                return _length
+
             return _length if len(self) == 0 else None
 
 # Use symbol for sole instance of singleton class.
