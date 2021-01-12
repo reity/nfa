@@ -28,13 +28,13 @@ class nfa(dict):
     state/node in the NFA state graph).
 
     >>> final = nfa()
-    >>> middle = nfa({456:final})
+    >>> middle = +nfa({456:final})
     >>> first = nfa({123:middle})
     >>> (first([123]), first([123, 456]), first([456]))
-    (None, 2, None)
+    (1, 2, None)
     >>> first = first.compile()
     >>> (first([123]), first([123, 456]), first([456]))
-    (None, 2, None)
+    (1, 2, None)
     >>> accept = nfa()
     >>> three = nfa({3:accept})
     >>> two = nfa({2:three})
@@ -138,7 +138,17 @@ class nfa(dict):
         by this `nfa` instance is an accepting state.
         """
         # pylint: disable=E1101
-        return len(self) == 0
+        return len(self) == 0 or\
+            (hasattr(self, "_accept") and self._accept)
+
+    def __pos__(self: nfa) -> nfa:
+        """
+        Return a shallow copy of this NFA with the state/node represented
+        by this `nfa` instance marked as an accepting state.
+        """
+        nfa_ = nfa(self.items())
+        setattr(nfa_, "_accept", True)
+        return nfa_
 
     def __matmul__(self: nfa, argument):
         """
