@@ -24,10 +24,17 @@ class epsilon:
 
 class nfa(dict):
     """
-    Class for a nondeterministic finite automaton
-    (also an individual state node in the NFA state
-    graph).
+    Class for a nondeterministic finite automaton (also an individual
+    state/node in the NFA state graph).
 
+    >>> final = nfa()
+    >>> middle = nfa({456:final})
+    >>> first = nfa({123:middle})
+    >>> (first([123]), first([123, 456]), first([456]))
+    (None, 2, None)
+    >>> first = first.compile()
+    >>> (first([123]), first([123, 456]), first([456]))
+    (None, 2, None)
     >>> accept = nfa()
     >>> three = nfa({3:accept})
     >>> two = nfa({2:three})
@@ -113,6 +120,26 @@ class nfa(dict):
       ...
     ValueError: input must be an iterable
     """
+    @staticmethod
+    def _has(string: reiter, index: int) -> bool:
+        """
+        Return a boolean indicating whether a reiterable symbol
+        string instance has a symbol at the specified index.
+        """
+        try:
+            string[index] # pylint: disable=W0104
+            return True
+        except (StopIteration, IndexError):
+            return False
+
+    def _accepts(self: nfa) -> bool:
+        """
+        Return a boolean indicating whether the state/node represented
+        by this `nfa` instance is an accepting state.
+        """
+        # pylint: disable=E1101
+        return len(self) == 0
+
     def __matmul__(self: nfa, argument):
         """
         Return a list of zero or more `nfa` instances
@@ -159,18 +186,18 @@ class nfa(dict):
         updated = False
         closure = self._epsilon_closure()
         for nfa__ in closure.values():
-            if len(nfa__) == 0:
+            if nfa__._accepts(): # pylint: disable=W0212
                 compiled[id(self)] = None
 
             for symbol in nfa__:
                 if not isinstance(symbol, epsilon):
                     for nfa_ in nfa__ @ symbol:
-                        # Add entry for the current state and symbol if it is not present.
+                        # Add entry for the current state/node and symbol if it is not present.
                         if (symbol, id(self)) not in compiled:
                             compiled[(symbol, id(self))] = set()
 
-                        # The accepting terminal state is marked by `None`.
-                        compiled[(symbol, id(self))] |= {None if len(nfa_) == 0 else id(nfa_)}
+                        # Update the transition table.
+                        compiled[(symbol, id(self))] |= {id(nfa_)}
                         updated = True
 
         # If any updates were made to the transition table, compile recursively.
@@ -200,91 +227,67 @@ class nfa(dict):
         # to match the supplied string via the compiled transition table.
 
         if hasattr(self, "_compiled") and self._compiled is not None: # pylint: disable=E1101
-            ids_ = set([id(self)])
-
-            # The initial state/node may have been an accept state/node.
-            if id(self) in self._compiled: # pylint: disable=E1101
-                ids_ |= {None}
+            lengths = set() # Lengths of paths that led to an accepting state/node.
+            ids_ = set([id(self)]) # Working set of states/nodes during multi-branch traversal.
 
             while True:
+                # Collect the list of subsequent states/nodes.
+                ids__ = set()
+                for id_ in ids_:
+                    # pylint: disable=E1101
+                    if id_ in self._compiled and (not full or not nfa._has(string, _length)):
+                        lengths.add(_length)
+
+                # Attempt to traverse possible paths using the next symbol in the string.
                 try:
-                    # Obtain the next symbol in the string.
                     symbol = string[_length]
                     _length += 1
 
-                    # Collect the list of subsequent states/nodes.
-                    ids__ = set()
+                    # Check table for given symbol and current states/nodes.
                     for id_ in ids_:
-                        # The initial state/node may have been an accept state/node.
-                        if id_ in self._compiled: # pylint: disable=E1101
-                            ids__ |= {None}
-
-                        # Check table for given symbol and state/node.
                         if (symbol, id_) in self._compiled: # pylint: disable=E1101
                             ids__ |= set(self._compiled[(symbol, id_)]) # pylint: disable=E1101
 
-                    # If no matching subsequent state/node exists but we have not yet
-                    # consumed at least one symbol, do not accept.
+                    # No matching subsequent state/node exists.
                     if len(ids__) == 0:
-                        return None
+                        return None if full else max(lengths, default=None)
 
-                    # If we have reached an accept state/node and cannot progress any other
-                    # way based on the current symbol, accept if a full match is not required.
-                    # Otherwise, this is a failure.
-                    if len(ids__) == 1 and None in ids__ and not full:
-                        return _length
-
-                    # Update list of working states/nodes.
+                    # Update working set of states/nodes.
                     ids_ = ids__
                 except (StopIteration, IndexError):
-                    return _length if None in ids_ else None # Accept if terminal state/node found.
+                    # Accept longest match if terminal states/nodes found.
+                    if any(id_ in self._compiled for id_ in ids_): # pylint: disable=E1101
+                        return _length
+                    return max(lengths, default=None) if not full else None
 
         # Since there is no compiled transition table, attempt to match
         # the supplied string via a recursive traversal through the nodes.
-        # Get the set of all states/nodes and check if any of them are an accept state.
-        closure = self._epsilon_closure().values()
+        closure = self._epsilon_closure().values() # Set of all reachable states/nodes.
 
         # Attempt to obtain the next symbol or end the search.
         # The length of each successful match will be collected so that the longest
         # match can be chosen (e.g., if matching the full string is not required).
         try:
-            # Obtain the next symbol in the string.
-            symbol = string[_length]
-
-            # If we are at an accept state/node (at this point there are
-            # more symbols in the string), only accept if a full match is
-            # not required.
-            if len(self) == 0 and not full:
-                return _length
+            symbol = string[_length] # Obtain the next symbol in the string.
 
             # Examine all possible branches reachable via empty transitions.
             # For each branch, find all branches corresponding to the symbol.
             # Collect the lengths of the matches and return the largest.
-            lengths = []
+            lengths = [_length] if self._accepts() and not full else []
             for nfa_ in closure:
                 if symbol in nfa_:
                     nfas_ = nfa_ @ symbol # Consume one symbol.
                     for nfa__ in nfas_: # For each possible branch.
-                        length = nfa__(
-                            string,
-                            full=full,
-                            _length=(_length + 1) # pylint: disable=W0212
-                        )
+                        length = nfa__(string, full=full, _length=(_length + 1))
                         if length is not None:
                             lengths.append(length)
 
-            if len(lengths) > 0:
-                return max(lengths)
-
-            return None # No accepting path found.
+            return max(lengths, default=None)
 
         except (StopIteration, IndexError):
             # If there are no more symbols in the string and an accept
             # state/node is immediately reachable, accept.
-            if any(len(nfa_) == 0 for nfa_ in closure):
-                return _length
-
-            return _length if len(self) == 0 else None
+            return _length if any(nfa_._accepts() for nfa_ in closure) else None
 
 # Use symbol for sole instance of singleton class.
 _epsilon = epsilon()
