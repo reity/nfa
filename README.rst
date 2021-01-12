@@ -10,11 +10,11 @@ Library for defining and working with native Python implementations of nondeterm
    :target: https://badge.fury.io/py/nfa
    :alt: PyPI version and link.
 
-.. |travis| image:: https://travis-ci.com/reity/nfa.svg?branch=master
+.. |travis| image:: https://travis-ci.com/reity/nfa.svg?branch=main
    :target: https://travis-ci.com/reity/nfa
 
-.. |coveralls| image:: https://coveralls.io/repos/github/reity/nfa/badge.svg?branch=master
-   :target: https://coveralls.io/github/reity/nfa?branch=master
+.. |coveralls| image:: https://coveralls.io/repos/github/reity/nfa/badge.svg?branch=main
+   :target: https://coveralls.io/github/reity/nfa?branch=main
 
 Package Installation and Usage
 ------------------------------
