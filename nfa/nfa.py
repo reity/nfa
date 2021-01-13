@@ -224,6 +224,18 @@ class nfa(dict):
 
         return self
 
+    def symbols(self: nfa):
+        """
+        Collect set of all symbols found in transitions of the NFA instance
+
+        >>> nfa({'a': nfa({'b': nfa({'c': nfa()})})}).symbols() == {'a', 'b', 'c'}
+        True
+        """
+        if not hasattr(self, '_compiled'):
+            self.compile()
+
+        return set(e[0] for e in self._compiled if isinstance(e, tuple)) # pylint: disable=E1101
+
     def to_dfa(self: nfa) -> nfa:
         """
         Compile NFA represented by this instance (i.e., acting as the initial
@@ -248,14 +260,25 @@ class nfa(dict):
         (4, 2, None)
         >>> (zero([0, 1, 2, 3, 4], full=False), zero([2, 3, 4], full=False), zero([2], full=False))
         (4, 2, None)
+        >>> accept = nfa().compile()
+        >>> accept('')
+        0
+        >>> accept('a') is None
+        True
+        >>> a_star = +nfa()
+        >>> a_star['a'] = a_star
+        >>> a_star = a_star.compile()
+        >>> all(a_star('a'*i) == i for i in range(10))
+        True
+        >>> a_star('b') is None
+        True
         """
         # The DFA transition table is built using the NFA transition table.
         if not hasattr(self, '_compiled'):
             self.compile()
 
-        # Collect all symbols in accepted strings and create empty DFA transition table.
-        symbols = set(e[0] for e in self._compiled if isinstance(e, tuple))
-        (t_nfa, t_dfa) = (self._compiled, {})
+        # Create empty DFA transition table.
+        (t_nfa, t_dfa) = (self._compiled, {}) # pylint: disable=E1101
 
         # Build the deterministic transition table.
         states = [frozenset([id(self)])]
@@ -264,11 +287,11 @@ class nfa(dict):
             updated = False
             states_ = set()
             for state in states:
-                for symbol in symbols:
+                for symbol in self.symbols():
                     state_ = frozenset([
-                        j 
-                        for i in state 
-                        if (symbol, i) in t_nfa 
+                        j
+                        for i in state
+                        if (symbol, i) in t_nfa
                         for j in t_nfa[(symbol, i)]
                     ])
 
@@ -284,8 +307,9 @@ class nfa(dict):
 
         # Remove transitions that lead to the empty set state.
         t_dfa = dict((e[0], frozenset(e[1])) for e in t_dfa.items() if len(e[1]) > 0)
-        states = set(state for (_, state) in t_dfa.items()) | set(state for (_, state) in t_dfa)
-        
+        states = {frozenset({id(self)})} # Add initial state in case there are no transitions.
+        states |= {state for (_, state) in t_dfa.items()} | {state for (_, state) in t_dfa}
+
         # Build states/nodes for DFA and mark them as accepting states/nodes
         # if they are such.
         dfas = {
