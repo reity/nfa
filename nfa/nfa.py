@@ -224,6 +224,84 @@ class nfa(dict):
 
         return self
 
+    def to_dfa(self: nfa) -> nfa:
+        """
+        Compile NFA represented by this instance (i.e., acting as the initial
+        state/node) into a DFA that accepts the same language.
+
+        >>> final = nfa()
+        >>> middle = +nfa({456:final})
+        >>> first = nfa({123:middle})
+        >>> first = first.to_dfa()
+        >>> (first([123]), first([123, 456]), first([456]))
+        (1, 2, None)
+        >>> first = first.compile()
+        >>> (first([123]), first([123, 456]), first([456]))
+        (1, 2, None)
+        >>> accept = nfa()
+        >>> three = nfa({3:accept})
+        >>> two = nfa({2:three})
+        >>> one = nfa({1:two})
+        >>> zero = nfa({0:one, 2:three})
+        >>> zero = zero.to_dfa()
+        >>> (zero([0, 1, 2, 3]), zero([2, 3]), zero([2, 2, 3]))
+        (4, 2, None)
+        >>> (zero([0, 1, 2, 3, 4], full=False), zero([2, 3, 4], full=False), zero([2], full=False))
+        (4, 2, None)
+        """
+        # The DFA transition table is built using the NFA transition table.
+        if not hasattr(self, '_compiled'):
+            self.compile()
+
+        # Collect all symbols in accepted strings and create empty DFA transition table.
+        symbols = set(e[0] for e in self._compiled if isinstance(e, tuple))
+        (t_nfa, t_dfa) = (self._compiled, {})
+
+        # Build the deterministic transition table.
+        states = [frozenset([id(self)])]
+        updated = True
+        while updated:
+            updated = False
+            states_ = set()
+            for state in states:
+                for symbol in symbols:
+                    state_ = frozenset([
+                        j 
+                        for i in state 
+                        if (symbol, i) in t_nfa 
+                        for j in t_nfa[(symbol, i)]
+                    ])
+
+                    if (symbol, state) not in t_dfa:
+                        t_dfa[(symbol, state)] = set()
+
+                    if not state_.issubset(t_dfa[(symbol, state)]):
+                        t_dfa[(symbol, state)] |= state_
+                        states_.add(state_)
+                        updated = True
+
+            states = states_
+
+        # Remove transitions that lead to the empty set state.
+        t_dfa = dict((e[0], frozenset(e[1])) for e in t_dfa.items() if len(e[1]) > 0)
+        states = set(state for (_, state) in t_dfa.items()) | set(state for (_, state) in t_dfa)
+        
+        # Build states/nodes for DFA and mark them as accepting states/nodes
+        # if they are such.
+        dfas = {
+            state: (+nfa() if any(i in t_nfa and t_nfa[i] is None for i in state) else nfa())
+            for state in states
+        }
+
+        # Link the DFA states/nodes with one another.
+        for (state, dfa) in dfas.items():
+            for (symbol, state_) in t_dfa:
+                if state == state_:
+                    dfa[symbol] = dfas[frozenset(t_dfa[(symbol, state_)])]
+
+        # The new DFA has a starting node that corresponds to starting node in this NFA instance.
+        return dfas[frozenset([id(self)])]
+
     def __call__(self: nfa, string, full: bool=True, _length=0) -> bool:
         """
         Determine whether a "string" (i.e., iterable) of symbols
