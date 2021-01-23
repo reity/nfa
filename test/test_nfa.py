@@ -78,16 +78,16 @@ class Test_nfa(TestCase):
         for nfa_ in islice(nfas(['a', 'b']), 0, 500):
             for full in (True, False):
                 ss = list(strs(['a', 'b'], 5))
-                ss_nfa_ = set(s for s in ss if nfa_(s, full) is not None)
+                sms_nfa_ = set((s, m) for s in ss for m in [nfa_(s, full)])
                 nfa_ = nfa_.compile()
-                ss_nfa_compiled = set(s for s in ss if nfa_(s, full) is not None)
-                self.assertEqual(ss_nfa_, ss_nfa_compiled)
+                sms_nfa_compiled = set((s, m) for s in ss for m in [nfa_(s, full)])
+                self.assertEqual(sms_nfa_, sms_nfa_compiled)
 
     def test_nfa_to_dfa(self):
         for nfa_ in islice(nfas(['a', 'b']), 0, 500):
             for full in (True, False):
                 ss = list(strs(['a', 'b'], 5))
-                ss_nfa_ = set(s for s in ss if nfa_(s, full) is not None)
+                sms_nfa_ = set((s, m) for s in ss for m in [nfa_(s, full)])
                 dfa_ = nfa_.to_dfa()
-                ss_dfa_ = set(s for s in ss if dfa_(s, full) is not None)
-                self.assertEqual(ss_nfa_, ss_dfa_)
+                sms_dfa_ = set((s, m) for s in ss for m in [dfa_(s, full)])
+                self.assertEqual(sms_nfa_, sms_dfa_)
