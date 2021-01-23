@@ -415,6 +415,22 @@ class nfa(dict):
             # is not required, return the length of the match so far.
             return 0 if not full and _length == 0 else None
 
+    def __str__(self: nfa) -> str:
+        """
+        Return string representation of instance.
+        """
+        return 'nfa(' + (str(dict(self)) if len(self) > 0 else '') + ')'
+
+    def __repr__(self: nfa) -> str:
+        """
+        Return string representation of instance.
+        >>> nfa({'a':nfa({'b':[nfa()]})})
+        nfa({'a': nfa({'b': [nfa()]})})
+        >>> nfa()
+        nfa()
+        """
+        return str(self)
+
 # Use symbol for sole instance of singleton class.
 _epsilon = epsilon()
 
