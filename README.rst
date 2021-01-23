@@ -33,7 +33,7 @@ All unit tests are executed and their coverage is measured when using `nose <htt
 
     nosetests
 
-All unit tests are included in the module itself and can be executed using `doctest <https://docs.python.org/3/library/doctest.html>`_::
+The subset of the unit tests included in the module itself can be executed using `doctest <https://docs.python.org/3/library/doctest.html>`_::
 
     python nfa/nfa.py -v
 
