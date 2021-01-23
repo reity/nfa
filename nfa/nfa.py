@@ -129,18 +129,6 @@ class nfa(dict):
     >>> a('a', full=False)
     0
     """
-    @staticmethod
-    def _has(string: reiter, index: int) -> bool:
-        """
-        Return a boolean indicating whether a reiterable symbol
-        string instance has a symbol at the specified index.
-        """
-        try:
-            string[index] # pylint: disable=W0104
-            return True
-        except (StopIteration, IndexError):
-            return False
-
     def _accepts(self: nfa) -> bool:
         """
         Return a boolean indicating whether the state/node represented
@@ -161,32 +149,28 @@ class nfa(dict):
 
     def __matmul__(self: nfa, argument):
         """
-        Return a list of zero or more `nfa` instances
-        based on the supplied argument.
+        Return a list of zero or more `nfa` instances reachable using transitions
+        that match the supplied argument (either epsilon or a symbol).
         """
-        if argument in self:
-            nfas = self[argument]
-            if isinstance(nfas, (tuple, list, set, frozenset)):
-                nfas = list(nfas)
-            else:
-                nfas = list([nfas])
-            return nfas
+        if isinstance(argument, epsilon):
+            # Collect all possible branches reachable via empty transitions.
+            (nfas, cont, e) = ({id(self): self}, True, epsilon()) # pylint: disable=C0103
+            while cont:
+                cont = False
+                for nfa_ in list(nfas.values()):
+                    nfas_ = nfa_.get(e, [])
+                    for nfa__ in [nfas_] if isinstance(nfas_, nfa) else nfas_:
+                        if id(nfa__) not in nfas:
+                            nfas[id(nfa__)] = nfa__
+                            cont = True
 
-        return list()
+            # The dictionary was used for deduplication.
+            return nfas.values()
 
-    def _epsilon_closure(self: nfa):
-        """
-        Collect all possible branches reachable via empty transitions.
-        """
-        (nfas, cont, e) = ({id(self): self}, True, epsilon()) # pylint: disable=C0103
-        while cont:
-            cont = False
-            for nfa_ in list(nfas.values()):
-                for nfa__ in nfa_ @ e:
-                    if id(nfa__) not in nfas:
-                        nfas[id(nfa__)] = nfa__
-                        cont = True
-        return nfas
+        # If the argument is a symbol, only one step along any
+        # branch is possible.
+        nfas_or_nfa = self.get(argument, [])
+        return [nfas_or_nfa] if isinstance(nfas_or_nfa, nfa) else nfas_or_nfa
 
     def compile(self: nfa, _compiled=None, _ids=None):
         """
@@ -203,8 +187,8 @@ class nfa(dict):
         # Update the transition table with entries corresponding to
         # this node.
         updated = False
-        closure = self._epsilon_closure()
-        for nfa__ in closure.values():
+        closure = self @ epsilon()
+        for nfa__ in closure:
             if nfa__._accepts(): # pylint: disable=W0212
                 compiled[id(self)] = None
 
@@ -221,7 +205,7 @@ class nfa(dict):
 
         # If any updates were made to the transition table, compile recursively.
         if updated:
-            for nfa__ in closure.values():
+            for nfa__ in closure:
                 for symbol in nfa__:
                     if not isinstance(symbol, epsilon):
                         for nfa_ in nfa__ @ symbol:
@@ -356,7 +340,7 @@ class nfa(dict):
                 ids__ = set()
                 for id_ in ids_:
                     # pylint: disable=E1101
-                    if id_ in self._compiled and (not full or not nfa._has(string, _length)):
+                    if id_ in self._compiled and (not full or not string.has(_length)):
                         lengths.add(_length)
 
                 # Attempt to traverse possible paths using the next symbol in the string.
@@ -383,7 +367,7 @@ class nfa(dict):
 
         # Since there is no compiled transition table, attempt to match
         # the supplied string via a recursive traversal through the nodes.
-        closure = self._epsilon_closure().values() # Set of all reachable states/nodes.
+        closure = self @ epsilon() # Set of all reachable states/nodes.
 
         # Attempt to obtain the next symbol or end the search.
         # The length of each successful match will be collected so that the longest
@@ -424,6 +408,7 @@ class nfa(dict):
     def __repr__(self: nfa) -> str:
         """
         Return string representation of instance.
+
         >>> nfa({'a':nfa({'b':[nfa()]})})
         nfa({'a': nfa({'b': [nfa()]})})
         >>> nfa()
