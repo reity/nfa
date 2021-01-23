@@ -172,13 +172,14 @@ class nfa(dict):
         nfas_or_nfa = self.get(argument, [])
         return [nfas_or_nfa] if isinstance(nfas_or_nfa, nfa) else nfas_or_nfa
 
-    def compile(self: nfa, _compiled=None, _ids=None):
+    def compile(self: nfa, _compiled=None, _states=None, _ids=None):
         """
         Compile NFA represented by this instance (i.e., acting as the initial
         state/node) into a transition table and save it as a private attribute.
         """
         compiled = {} if _compiled is None else _compiled
         ids = [] if _ids is None else _ids
+        states = {id(self): self} if _states is None else _states
 
         # Cut off recursion if this state/node has already been visited.
         if id(self) in ids:
@@ -201,6 +202,11 @@ class nfa(dict):
 
                         # Update the transition table.
                         compiled[(symbol, id(self))] |= {id(nfa_)}
+
+                        # Update the state dictionary.
+                        states[id(nfa_)] = nfa_
+
+                        # Indicate that compilation should continue.
                         updated = True
 
         # If any updates were made to the transition table, compile recursively.
@@ -209,13 +215,46 @@ class nfa(dict):
                 for symbol in nfa__:
                     if not isinstance(symbol, epsilon):
                         for nfa_ in nfa__ @ symbol:
-                            nfa_.compile(_compiled=compiled, _ids=(ids + [id(self)]))
+                            nfa_.compile(
+                                _compiled=compiled,
+                                _states=states,
+                                _ids=(ids + [id(self)])
+                            )
 
-        # If we are at the root invocation, save the transition table as an attribute.
+        # If we are at the root invocation, save the state list and
+        # transition table as an attribute.
         if _compiled is None:
             setattr(self, "_compiled", compiled)
+            setattr(self, "_states", list(states.values()))
 
         return self
+
+    def states(self: nfa, argument=None):
+        """
+        Collect set of all states/nodes (i.e., the corresponding `nfa` instances)
+        reachable from this NFA instance, or the set of states reachable via
+        transitions that match the supplied argument.
+        >>> abcd = nfa({'a': nfa({'b': nfa({'c': nfa()})})})
+        >>> abcd['a']['b']['d'] = nfa()
+        >>> [list(sorted(state.symbols())) for state in abcd.states()]
+        [['a', 'b', 'c', 'd'], ['b', 'c', 'd'], ['c', 'd'], [], []]
+        >>> [
+        ...     [list(sorted(s.symbols())) for s in state.states(list(state.keys())[0])]
+        ...     for state in abcd.states()
+        ...     if len(state.keys()) > 0
+        ... ]
+        [[['b', 'c', 'd']], [['c', 'd']], [[]]]
+        """
+        # Return list of all reachable states.
+        if argument is None:
+            if not hasattr(self, '_states'):
+                self.compile()
+
+            return self._states # pylint: disable=E1101
+
+        # If an argument is supplied, return the subset of states
+        # reachable via matching with the supplied argument.
+        return self @ argument
 
     def symbols(self: nfa):
         """
