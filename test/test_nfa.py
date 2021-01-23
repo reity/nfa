@@ -1,8 +1,24 @@
+from importlib import import_module
 from itertools import product, islice, chain, combinations
 from random import sample
 from unittest import TestCase
 
 from nfa.nfa import nfa, epsilon
+
+def api_methods():
+    """
+    API symbols that should be available to users upon module import.
+    """
+    return {'nfa', 'epsilon'}
+
+class Test_namespace(TestCase):
+    """
+    Check that the exported namespace provide access to the expected
+    classes and functions.
+    """
+    def test_module(self):
+        module = import_module('nfa.nfa')
+        self.assertTrue(api_methods().issubset(module.__dict__.keys()))
 
 def powerset(iterable):
     """

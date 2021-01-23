@@ -222,7 +222,7 @@ class nfa(dict):
                             )
 
         # If we are at the root invocation, save the state list and
-        # transition table as an attribute.
+        # transition table as attributes.
         if _compiled is None:
             setattr(self, "_compiled", compiled)
             setattr(self, "_states", list(states.values()))
@@ -234,6 +234,7 @@ class nfa(dict):
         Collect set of all states/nodes (i.e., the corresponding `nfa` instances)
         reachable from this NFA instance, or the set of states reachable via
         transitions that match the supplied argument.
+
         >>> abcd = nfa({'a': nfa({'b': nfa({'c': nfa()})})})
         >>> abcd['a']['b']['d'] = nfa()
         >>> [list(sorted(state.symbols())) for state in abcd.states()]
