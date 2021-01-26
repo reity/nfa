@@ -504,6 +504,41 @@ class nfa(dict):
         """
         return str(self)
 
+    def copy(self: nfa, _memo=None) -> nfa:
+        """
+        Return a deep copy of this NFA in which all NFA instances
+        are copies but all other references are not copies.
+
+        >>> a_star = +nfa()
+        >>> a_star['a'] = a_star
+        >>> a_star['b'] = [nfa()]
+        >>> a_star_ = a_star.copy()
+        >>> all(a_star_('a'*i) == i for i in range(10))
+        True
+        >>> a_star_('b')
+        1
+        >>> a_star_('c') is None
+        True
+        """
+        _memo = {} if _memo is None else _memo
+
+        # If this node has already been copied, return the copy.
+        if id(self) in _memo:
+            return _memo[id(self)]
+
+        # Create a copy of this node.
+        nfa_ = nfa()
+        if hasattr(self, '_accept'):
+            setattr(nfa_, '_accept', self._accept) # pylint: disable=E1101
+        _memo[id(self)] = nfa_
+        for symbol in self:
+            if isinstance(self[symbol], nfa):
+                nfa_[symbol] = self[symbol].copy(_memo)
+            else:
+                nfa_[symbol] = tuple(nfa__.copy(_memo) for nfa__ in self[symbol])
+
+        return nfa_
+
 # Use symbol for sole instance of singleton class.
 _epsilon = epsilon()
 
