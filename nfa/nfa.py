@@ -480,7 +480,14 @@ class nfa(dict):
         """
         Return string representation of instance.
         """
-        return 'nfa(' + (str(dict(self)) if len(self) > 0 else '') + ')'
+        # Determine if a prefix operator is necessary.
+        prefix = ''
+        if self and len(self) > 0:
+            prefix = '+'
+        elif not self and len(self) == 0:
+            prefix = '-'
+
+        return prefix + 'nfa(' + (str(dict(self)) if len(self) > 0 else '') + ')'
 
     def __repr__(self: nfa) -> str:
         """
@@ -490,8 +497,10 @@ class nfa(dict):
         nfa({'a': nfa({'b': [nfa()]})})
         >>> nfa()
         nfa()
-        >>> nfa({'a': nfa()})
-        nfa({'a': nfa()})
+        >>> +nfa({'a': nfa()})
+        +nfa({'a': nfa()})
+        >>> +nfa({'a': -nfa()})
+        +nfa({'a': -nfa()})
         """
         return str(self)
 
