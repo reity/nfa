@@ -40,7 +40,6 @@ def nfas(alphabet):
     """
     Yield a sample of all NFAs for the supplied alphabet of symbols.
     """
-    e = epsilon
     ns = [nfa()]
     while True:
         # Take some of the NFAs that are already built.
@@ -51,31 +50,41 @@ def nfas(alphabet):
         nss = list([ns_ for ns_ in powerset(ns) if len(ns_) > 0])
 
         # Iterate over every non-empty subset of symbols.
-        for ss in [ss for ss in powerset(alphabet) if len(ss) > 0]:
-            # Iterate over every way of assigning a subset to a symbol:
+        for ss in [ss for ss in powerset(alphabet + [epsilon]) if len(ss) > 0]:
+
+            # Iterate over every way of assigning a subset to a symbol
+            # in order to create forward edges from the new node.
             for ns_per_s in product(*[nss]*len(ss)):
-                n = nfa(zip(ss, ns_per_s))
+
+                # Create new node and its forward edges.
+                n = nfa(zip(ss, ns_per_s)).copy()
+
+                # Add some back edges to the node from existing nodes.
+                for (s, n_) in product(ss, sample(n.states(), len(n.states()) // 2)):
+                    if id(n) != id(n_):
+                        n_[s] = n
+
                 # The new state/node can either be an accepting state/node or not.
-                for n in [n, +n]:
+                for n in [n.copy(), (+n).copy()]:
                     ns.append(n)
                     yield n
 
 class Test_nfa(TestCase):
     def test_nfa(self):
-        for nfa_ in islice(nfas(['a', 'b']), 0, 500):
+        for nfa_ in islice(nfas(['a', 'b']), 0, 1000):
             for s in strs(['a', 'b'], 5):
                 match = nfa_(s)
                 self.assertTrue((isinstance(match, int) and match == len(s)) or match is None)
 
     def test_nfa_full_false(self):
-        for nfa_ in islice(nfas(['a', 'b']), 0, 500):
+        for nfa_ in islice(nfas(['a', 'b']), 0, 1000):
             for s in strs(['a', 'b'], 5):
                 s += ('c', 'd')
                 match = nfa_(s, full=False)
                 self.assertTrue((isinstance(match, int) and match <= len(s) - 2) or match is None)
 
     def test_nfa_compile(self):
-        for nfa_ in islice(nfas(['a', 'b']), 0, 500):
+        for nfa_ in islice(nfas(['a', 'b']), 0, 1000):
             for full in (True, False):
                 ss = list(strs(['a', 'b'], 5))
                 sms_nfa_ = set((s, m) for s in ss for m in [nfa_(s, full)])
@@ -84,7 +93,7 @@ class Test_nfa(TestCase):
                 self.assertEqual(sms_nfa_, sms_nfa_compiled)
 
     def test_nfa_to_dfa(self):
-        for nfa_ in islice(nfas(['a', 'b']), 0, 500):
+        for nfa_ in islice(nfas(['a', 'b']), 0, 1000):
             for full in (True, False):
                 ss = list(strs(['a', 'b'], 5))
                 sms_nfa_ = set((s, m) for s in ss for m in [nfa_(s, full)])
