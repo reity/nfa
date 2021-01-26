@@ -15,12 +15,33 @@ from reiter import reiter
 class epsilon:
     """
     Singleton class for epsilon-transition edge label.
+
+    >>> nfa({_epsilon: nfa()})
+    nfa({epsilon: nfa()})
     """
     def __hash__(self):
+        """
+        All instances are the same instance because this is a singleton class.
+        """
         return 0
 
     def __eq__(self, other):
+        """
+        All instances are the same instance because this is a singleton class.
+        """
         return isinstance(self, epsilon) and isinstance(other, epsilon)
+
+    def __str__(self):
+        """
+        String representation (conforms with exported symbol for epsilon).
+        """
+        return 'epsilon'
+
+    def __repr__(self):
+        """
+        String representation (conforms with exported symbol for epsilon).
+        """
+        return str(self)
 
 class nfa(dict):
     """
@@ -230,6 +251,11 @@ class nfa(dict):
             if nfa__: # pylint: disable=W0212
                 compiled[id(self)] = None
 
+            # Update the state dictionary with this state/node. (to ensure that
+            # all states in the closure are included in the dictionary).
+            states[id(nfa__)] = nfa__
+
+            # Compile across all transitions from the state/node.
             for symbol in nfa__:
                 if not isinstance(symbol, epsilon):
                     for nfa_ in nfa__ @ symbol:
@@ -282,6 +308,9 @@ class nfa(dict):
         ...     if len(state.keys()) > 0
         ... ]
         [[['b', 'c', 'd']], [['c', 'd']], [[]]]
+        >>> none = nfa({_epsilon: nfa()})
+        >>> len([s for s in none.states()])
+        2
         """
         # Return list of all reachable states.
         if argument is None:
