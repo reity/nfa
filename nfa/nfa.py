@@ -64,12 +64,12 @@ class nfa(dict):
     >>> (zero([0, 1, 2, 3]), zero([2, 3]), zero([2, 2, 3]))
     (4, 2, None)
     >>> (zero([0, 1, 2, 3, 4], full=False), zero([2, 3, 4], full=False), zero([2], full=False))
-    (4, 2, 0)
+    (4, 2, None)
     >>> zero = nfa({0:one, epsilon():[two, three]}).compile()
     >>> (zero([0, 1, 2, 3]), zero([2, 3]), zero([3]), zero([2, 2, 3]))
     (4, 2, 1, None)
     >>> (zero([0, 1, 2, 3, 4], full=False), zero([2, 3, 4], full=False), zero([2], full=False))
-    (4, 2, 0)
+    (4, 2, None)
     >>> zeros = nfa({epsilon():[accept]})
     >>> zeros[0] = [zeros]
     >>> all(zeros([0]*i) == i for i in range(10))
@@ -140,20 +140,58 @@ class nfa(dict):
     Traceback (most recent call last):
       ...
     ValueError: input must be an iterable
-    >>> a = nfa({'a': nfa()})
-    >>> a('', full=False)
-    0
     >>> a = nfa({'a': nfa({epsilon(): nfa()})})
     >>> a('a', full=False)
     1
     >>> a = nfa({'a': nfa({epsilon(): nfa({'b': nfa()})})})
-    >>> a('a', full=False)
-    0
+    >>> a('a', full=False) is None
+    True
     """
     def __bool__(self: nfa) -> bool:
         """
         Return a boolean indicating whether the state/node represented
         by this `nfa` instance is an accepting state.
+
+        >>> (bool(nfa()), bool(nfa({'a': nfa()})))
+        (True, False)
+        >>> empty = nfa({epsilon(): nfa()})
+        >>> (empty(''), empty('', full=False))
+        (0, 0)
+        >>> empty = empty.compile()
+        >>> (empty(''), empty('', full=False))
+        (0, 0)
+        >>> (empty('a'), empty('a', full=False))
+        (None, 0)
+        >>> empty = empty.compile()
+        >>> (empty('a'), empty('a', full=False))
+        (None, 0)
+        >>> a = nfa({'a': nfa()})
+        >>> (a(''), a('', full=False))
+        (None, None)
+        >>> a = a.compile()
+        >>> (a(''), a('', full=False))
+        (None, None)
+        >>> a = +a
+        >>> a('', full=False)
+        0
+        >>> a = a.compile()
+        >>> a('', full=False)
+        0
+        >>> cycle = nfa()
+        >>> cycle['a'] = cycle
+        >>> bool(cycle)
+        False
+        >>> (cycle('a'), cycle('a', full=False))
+        (None, None)
+        >>> cycle = cycle.compile()
+        >>> (cycle('a'), cycle('a', full=False))
+        (None, None)
+        >>> reject = nfa({epsilon(): -nfa()})
+        >>> (reject(''), reject('', full=False))
+        (None, None)
+        >>> reject = reject.compile()
+        >>> (reject(''), reject('', full=False))
+        (None, None)
         """
         # pylint: disable=E1101
         return len(self) == 0 if not hasattr(self, "_accept") else self._accept
@@ -179,8 +217,8 @@ class nfa(dict):
         >>> none = nfa({'a': nfa({'b': -nfa()})})
         >>> none('a') is None
         True
-        >>> none('ab', full=False)
-        0
+        >>> none('ab', full=False) is None
+        True
         """
         nfa_ = nfa(self.items())
         setattr(nfa_, "_accept", False)
@@ -195,8 +233,8 @@ class nfa(dict):
         >>> none = nfa({'a': nfa({'b': ~nfa()})})
         >>> none('a') is None
         True
-        >>> none('ab', full=False)
-        0
+        >>> none('ab', full=False) is None
+        True
         >>> none['a']['b'] = ~none['a']['b']
         >>> none('ab')
         2
@@ -251,7 +289,7 @@ class nfa(dict):
             if nfa__: # pylint: disable=W0212
                 compiled[id(self)] = None
 
-            # Update the state dictionary with this state/node. (to ensure that
+            # Update the state dictionary with this state/node (to ensure that
             # all states in the closure are included in the dictionary).
             states[id(nfa__)] = nfa__
 
@@ -309,6 +347,11 @@ class nfa(dict):
         ... ]
         [[['b', 'c', 'd']], [['c', 'd']], [[]]]
         >>> none = nfa({_epsilon: nfa()})
+        >>> none('')
+        0
+        >>> none = nfa({_epsilon: -nfa()})
+        >>> none('') is None
+        True
         >>> len([s for s in none.states()])
         2
         """
@@ -358,7 +401,7 @@ class nfa(dict):
         >>> (zero([0, 1, 2, 3]), zero([2, 3]), zero([2, 2, 3]))
         (4, 2, None)
         >>> (zero([0, 1, 2, 3, 4], full=False), zero([2, 3, 4], full=False), zero([2], full=False))
-        (4, 2, 0)
+        (4, 2, None)
         >>> accept = nfa().compile()
         >>> accept('')
         0
@@ -461,15 +504,16 @@ class nfa(dict):
 
                     # No matching subsequent state/node exists.
                     if len(ids__) == 0:
-                        return None if full else max(lengths, default=0)
+                        return None if full else max(lengths, default=None)
 
                     # Update working set of states/nodes.
                     ids_ = ids__
                 except (StopIteration, IndexError):
                     # Accept longest match if terminal states/nodes found.
                     if any(id_ in self._compiled for id_ in ids_): # pylint: disable=E1101
-                        return _length
-                    return None if full else max(lengths, default=0)
+                        return max(lengths)
+
+                    return None if full else max(lengths, default=None)
 
         # Since there is no compiled transition table, attempt to match
         # the supplied string via a recursive traversal through the nodes.
@@ -486,6 +530,13 @@ class nfa(dict):
             # Collect the lengths of the matches and return the largest.
             lengths = [_length] if self and not full else []
             for nfa_ in closure:
+                # If we can reach an accepting state via epsilon transitions,
+                # add a potential match length.
+                if nfa_ and not full:
+                    lengths.append(_length)
+
+                # If the symbol can be consumed, do so and proceed recursively
+                # along child branches.
                 if symbol in nfa_:
                     nfas_ = nfa_ @ symbol # Consume one symbol.
                     for nfa__ in nfas_: # For each possible branch.
@@ -493,7 +544,10 @@ class nfa(dict):
                         if length is not None:
                             lengths.append(length)
 
-            return max(lengths, default=(0 if not full else None))
+            # Return the longest match or, if there are none, either accept
+            # (if an accepting state node has been reached and a full match is
+            # not required) or reject (for this invocation).
+            return max(lengths, default=(0 if bool(self) and not full else None))
 
         except (StopIteration, IndexError):
             # If there are no more symbols in the string and an accept
@@ -501,9 +555,9 @@ class nfa(dict):
             if any(nfa_ for nfa_ in closure):
                 return _length
 
-            # If this is the initial (i.e., root) invocation and a full match
-            # is not required, return the length of the match so far.
-            return 0 if not full and _length == 0 else None
+            # Reject the string (whether full matches are accepted is not relevant
+            # because the string has been fully consumed at this point).
+            return None
 
     def __str__(self: nfa) -> str:
         """
