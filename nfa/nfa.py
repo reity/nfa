@@ -129,22 +129,59 @@ class nfa(dict):
     >>> a('a', full=False)
     0
     """
-    def _accepts(self: nfa) -> bool:
+    def __bool__(self: nfa) -> bool:
         """
         Return a boolean indicating whether the state/node represented
         by this `nfa` instance is an accepting state.
         """
         # pylint: disable=E1101
-        return len(self) == 0 or\
-            (hasattr(self, "_accept") and self._accept)
+        return len(self) == 0 if not hasattr(self, "_accept") else self._accept
 
     def __pos__(self: nfa) -> nfa:
         """
         Return a shallow copy of this NFA with the state/node represented
         by this `nfa` instance marked as an accepting state.
+
+        >>> a = nfa({'a': +nfa({'b': nfa()})})
+        >>> a('a')
+        1
         """
         nfa_ = nfa(self.items())
         setattr(nfa_, "_accept", True)
+        return nfa_
+
+    def __neg__(self: nfa) -> nfa:
+        """
+        Return a shallow copy of this NFA with the state/node represented
+        by this `nfa` instance marked as a non-accepting state.
+
+        >>> none = nfa({'a': nfa({'b': -nfa()})})
+        >>> none('a') is None
+        True
+        >>> none('ab', full=False)
+        0
+        """
+        nfa_ = nfa(self.items())
+        setattr(nfa_, "_accept", False)
+        return nfa_
+
+    def __invert__(self: nfa) -> nfa:
+        """
+        Return a shallow copy of this NFA with the state/node represented
+        by this `nfa` instance marked with an accepting status that is the
+        opposite of the original node.
+
+        >>> none = nfa({'a': nfa({'b': ~nfa()})})
+        >>> none('a') is None
+        True
+        >>> none('ab', full=False)
+        0
+        >>> none['a']['b'] = ~none['a']['b']
+        >>> none('ab')
+        2
+        """
+        nfa_ = nfa(self.items())
+        setattr(nfa_, "_accept", not bool(self))
         return nfa_
 
     def __matmul__(self: nfa, argument):
@@ -190,7 +227,7 @@ class nfa(dict):
         updated = False
         closure = self @ epsilon()
         for nfa__ in closure:
-            if nfa__._accepts(): # pylint: disable=W0212
+            if nfa__: # pylint: disable=W0212
                 compiled[id(self)] = None
 
             for symbol in nfa__:
@@ -418,7 +455,7 @@ class nfa(dict):
             # Examine all possible branches reachable via empty transitions.
             # For each branch, find all branches corresponding to the symbol.
             # Collect the lengths of the matches and return the largest.
-            lengths = [_length] if self._accepts() and not full else []
+            lengths = [_length] if self and not full else []
             for nfa_ in closure:
                 if symbol in nfa_:
                     nfas_ = nfa_ @ symbol # Consume one symbol.
@@ -432,7 +469,7 @@ class nfa(dict):
         except (StopIteration, IndexError):
             # If there are no more symbols in the string and an accept
             # state/node is immediately reachable, accept.
-            if any(nfa_._accepts() for nfa_ in closure):
+            if any(nfa_ for nfa_ in closure):
                 return _length
 
             # If this is the initial (i.e., root) invocation and a full match
@@ -453,6 +490,8 @@ class nfa(dict):
         nfa({'a': nfa({'b': [nfa()]})})
         >>> nfa()
         nfa()
+        >>> nfa({'a': nfa()})
+        nfa({'a': nfa()})
         """
         return str(self)
 
