@@ -559,10 +559,16 @@ class nfa(dict):
             # because the string has been fully consumed at this point).
             return None
 
-    def __str__(self: nfa) -> str:
+    def __str__(self: nfa, _visited=frozenset()) -> str:
         """
         Return string representation of instance.
         """
+        # Avoid unbounded recursion.
+        if id(self) in _visited:
+            return 'nfa({...})'
+
+        _visited = _visited | {id(self)}
+
         # Determine if a prefix operator is necessary.
         prefix = ''
         if self and len(self) > 0:
@@ -570,20 +576,52 @@ class nfa(dict):
         elif not self and len(self) == 0:
             prefix = '-'
 
-        return prefix + 'nfa(' + (str(dict(self)) if len(self) > 0 else '') + ')'
+        def str_(o):
+            return o.__str__(_visited) if isinstance(o, nfa) else repr(o)
+
+        def strs_(v):
+            if isinstance(v, tuple):
+                return (
+                    '(' + (", ".join(str_(n) for n in v)) + ')'
+                    if len(v) != 1 else
+                    '(' + str_(v[0]) + ',)'
+                )
+            if isinstance(v, list):
+                return '[' + (", ".join(str_(n) for n in v)) + ']'
+            raise TypeError(
+                'values must be nfa instances or non-empty lists/tuples of nfa instances'
+            )
+
+        return prefix + 'nfa(' + (
+            ('{' + (", ".join([
+                repr(k) + ': ' + (str_ if isinstance(v, nfa) else strs_)(v)
+                for (k, v) in self.items()
+            ])) + '}') if len(self) > 0 else ''
+        ) + ')'
 
     def __repr__(self: nfa) -> str:
         """
         Return string representation of instance.
 
-        >>> nfa({'a':nfa({'b':[nfa()]})})
-        nfa({'a': nfa({'b': [nfa()]})})
+        >>> nfa({'a': nfa({'b':(nfa(),)})})
+        nfa({'a': nfa({'b': (nfa(),)})})
+        >>> nfa({'a': [nfa({'b': [nfa()]})]})
+        nfa({'a': [nfa({'b': [nfa()]})]})
         >>> nfa()
         nfa()
         >>> +nfa({'a': nfa()})
         +nfa({'a': nfa()})
         >>> +nfa({'a': -nfa()})
         +nfa({'a': -nfa()})
+        >>> cycle = nfa({'a': nfa()})
+        >>> cycle['a']['b'] = cycle
+        >>> cycle
+        nfa({'a': nfa({'b': nfa({...})})})
+        >>> cycle['a'] = 123
+        >>> cycle
+        Traceback (most recent call last):
+          ...
+        TypeError: values must be nfa instances or non-empty lists/tuples of nfa instances
         """
         return str(self)
 
