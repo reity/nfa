@@ -31,7 +31,7 @@ limit-inference-results=100
 load-plugins=
 
 # Pickle collected data for later comparisons.
-persistent=yes
+persistent=no
 
 # Specify a configuration file.
 #rcfile=
@@ -291,7 +291,7 @@ variable-naming-style=snake_case
 
 # Regular expression matching correct variable names. Overrides variable-
 # naming-style.
-#variable-rgx=
+variable-rgx=^[a-z][a-z0-9]*(((_[a-z0-9]+)*)?)(_*)$
 
 
 [FORMAT]

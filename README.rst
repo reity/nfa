@@ -39,7 +39,7 @@ The subset of the unit tests included in the module itself can be executed using
 
 Style conventions are enforced using `Pylint <https://www.pylint.org/>`_::
 
-    pylint nfa
+    pylint nfa test/test_nfa
 
 Contributions
 -------------

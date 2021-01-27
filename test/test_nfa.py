@@ -1,3 +1,11 @@
+"""Bounded exhaustive unit tests for data structure methods.
+
+Test suite in which functional unit tests for matching, compilation,
+and conversion methods are applied to a sample of a bounded subset of
+all possible data structure instances.
+"""
+# pylint: disable=C0103
+
 from importlib import import_module
 from itertools import product, islice, chain, combinations
 from random import sample
@@ -13,10 +21,13 @@ def api_methods():
 
 class Test_namespace(TestCase):
     """
-    Check that the exported namespace provide access to the expected
-    classes and functions.
+    Tests of module namespace.
     """
     def test_module(self):
+        """
+        Confirm that the exported namespace provide access to the expected
+        classes and functions.
+        """
         module = import_module('nfa.nfa')
         self.assertTrue(api_methods().issubset(module.__dict__.keys()))
 
@@ -59,10 +70,9 @@ def nfas(alphabet):
                 # Create new node and its forward edges.
                 n = nfa(list(zip(ss, ns_per_s))).copy()
 
-                # Add some back edges to the node from existing nodes.
+                # Add a self-loop and/or back edges to the node from existing nodes.
                 for (s, n_) in product(ss, sample(n.states(), len(n.states()) // 2)):
-                    if id(n) != id(n_):
-                        n_[s] = n
+                    n_[s] = n
 
                 # The new state/node can either be an accepting state/node or not.
                 for n in [n.copy(), (+n).copy()]:
@@ -70,32 +80,47 @@ def nfas(alphabet):
                     yield n
 
 class Test_nfa(TestCase):
+    """
+    Functional unit tests of data structure methods.
+    """
     def test_nfa(self):
+        """
+        Basic unit tests of default full string matching functionality.
+        """
         for nfa_ in islice(nfas(['a', 'b']), 0, 1000):
-            for s in strs(['a', 'b'], 5):
+            for s in strs(['a', 'b'], 7):
                 match = nfa_(s)
                 self.assertTrue((isinstance(match, int) and match == len(s)) or match is None)
 
     def test_nfa_full_false(self):
+        """
+        Basic unit tests of partial string matching functionality.
+        """
         for nfa_ in islice(nfas(['a', 'b']), 0, 1000):
-            for s in strs(['a', 'b'], 5):
+            for s in strs(['a', 'b'], 7):
                 s += ('c', 'd')
                 match = nfa_(s, full=False)
                 self.assertTrue((isinstance(match, int) and match <= len(s) - 2) or match is None)
 
     def test_nfa_compile(self):
+        """
+        Unit tests of instance compilation method and table-based matching functionality.
+        """
         for nfa_ in islice(nfas(['a', 'b']), 0, 1000):
             for full in (True, False):
-                ss = list(strs(['a', 'b'], 5))
+                ss = list(strs(['a', 'b'], 7))
                 sms_nfa_ = set((s, m) for s in ss for m in [nfa_(s, full)])
                 nfa_ = nfa_.compile()
                 sms_nfa_compiled = set((s, m) for s in ss for m in [nfa_(s, full)])
                 self.assertEqual(sms_nfa_, sms_nfa_compiled)
 
     def test_nfa_to_dfa(self):
+        """
+        Unit tests of instance DFA conversion method.
+        """
         for nfa_ in islice(nfas(['a', 'b']), 0, 1000):
             for full in (True, False):
-                ss = list(strs(['a', 'b'], 5))
+                ss = list(strs(['a', 'b'], 7))
                 sms_nfa_ = set((s, m) for s in ss for m in [nfa_(s, full)])
                 dfa_ = nfa_.to_dfa()
                 sms_dfa_ = set((s, m) for s in ss for m in [dfa_(s, full)])
