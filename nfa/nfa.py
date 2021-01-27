@@ -9,7 +9,7 @@ serve as edges).
 
 from __future__ import annotations
 import doctest
-from collections.abc import Iterable
+from collections.abc import Iterable, Collection
 from reiter import reiter
 
 class epsilon:
@@ -147,6 +147,78 @@ class nfa(dict):
     >>> a('a', full=False) is None
     True
     """
+    def __new__(cls, argument=None):
+        """
+        Constructor for an instance that enforces constraints on argument types
+        (i.e., NFA instances can only have other NFA instances or lists/tuples
+        thereof as values).
+
+        >>> nfa()
+        nfa()
+        >>> len(nfa({'a': nfa()}))
+        1
+        >>> len(nfa({'a': [nfa()]}))
+        1
+        >>> len(nfa({'a': (nfa(),)}))
+        1
+        >>> len(nfa([('x', nfa())]))
+        1
+        >>> len(nfa(list(zip(['a', 'b'], [nfa(), nfa()]))))
+        2
+        >>> len(nfa(zip(['a', 'b'], [nfa(), nfa()])))
+        Traceback (most recent call last):
+          ...
+        TypeError: argument must be a collection
+        >>> nfa({'a': []})
+        Traceback (most recent call last):
+          ...
+        TypeError: values must be nfa instances or non-empty lists/tuples of nfa instances
+        >>> nfa({'a': [123]})
+        Traceback (most recent call last):
+          ...
+        TypeError: values must be nfa instances or non-empty lists/tuples of nfa instances
+        >>> nfa([1, 2])
+        Traceback (most recent call last):
+          ...
+        TypeError: values must be nfa instances or non-empty lists/tuples of nfa instances
+        >>> nfa({'x': 123})
+        Traceback (most recent call last):
+          ...
+        TypeError: values must be nfa instances or non-empty lists/tuples of nfa instances
+        >>> nfa({'x': [123]})
+        Traceback (most recent call last):
+          ...
+        TypeError: values must be nfa instances or non-empty lists/tuples of nfa instances
+        """
+        argument = {} if argument is None else argument
+
+        # Ensure that type checking and other method invocations that may traverse
+        # the NFA instance do not consume the argument (e.g., if it is an iterable).
+        if not isinstance(argument, Collection):
+            raise TypeError('argument must be a collection')
+
+        # Ensure that it is possible to convert the argument to a dictionary using
+        # the usual approach (making sure not to consume iterables permanently).
+        type_error = TypeError(
+            'values must be nfa instances or non-empty lists/tuples of nfa instances'
+        )
+        try:
+            dict_ = dict(argument)
+        except TypeError:
+            raise type_error from None
+
+        # Ensure value types are NFA instances or tuples/lists thereof.
+        for value in dict_.values():
+            if isinstance(value, nfa):
+                pass
+            elif isinstance(value, (tuple, list)) and len(value) > 0 and\
+                 all(isinstance(item, nfa) for item in value):
+                pass
+            else:
+                raise type_error
+
+        return super().__new__(cls, dict_)
+
     def __bool__(self: nfa) -> bool:
         """
         Return a boolean indicating whether the state/node represented

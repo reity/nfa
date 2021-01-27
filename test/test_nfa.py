@@ -57,7 +57,7 @@ def nfas(alphabet):
             for ns_per_s in product(*[nss]*len(ss)):
 
                 # Create new node and its forward edges.
-                n = nfa(zip(ss, ns_per_s)).copy()
+                n = nfa(list(zip(ss, ns_per_s))).copy()
 
                 # Add some back edges to the node from existing nodes.
                 for (s, n_) in product(ss, sample(n.states(), len(n.states()) // 2)):
