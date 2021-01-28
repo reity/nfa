@@ -12,37 +12,6 @@ import doctest
 from collections.abc import Iterable, Collection
 from reiter import reiter
 
-class epsilon:
-    """
-    Singleton class for epsilon-transition edge label.
-
-    >>> nfa({_epsilon: nfa()})
-    nfa({epsilon: nfa()})
-    """
-    def __hash__(self):
-        """
-        All instances are the same instance because this is a singleton class.
-        """
-        return 0
-
-    def __eq__(self, other):
-        """
-        All instances are the same instance because this is a singleton class.
-        """
-        return isinstance(self, epsilon) and isinstance(other, epsilon)
-
-    def __str__(self):
-        """
-        String representation (conforms with exported symbol for epsilon).
-        """
-        return 'epsilon'
-
-    def __repr__(self):
-        """
-        String representation (conforms with exported symbol for epsilon).
-        """
-        return str(self)
-
 class nfa(dict):
     """
     Class for a nondeterministic finite automaton (also an individual
@@ -65,16 +34,16 @@ class nfa(dict):
     (4, 2, None)
     >>> (zero([0, 1, 2, 3, 4], full=False), zero([2, 3, 4], full=False), zero([2], full=False))
     (4, 2, None)
-    >>> zero = nfa({0:one, epsilon():[two, three]}).compile()
+    >>> zero = nfa({0:one, epsilon:[two, three]}).compile()
     >>> (zero([0, 1, 2, 3]), zero([2, 3]), zero([3]), zero([2, 2, 3]))
     (4, 2, 1, None)
     >>> (zero([0, 1, 2, 3, 4], full=False), zero([2, 3, 4], full=False), zero([2], full=False))
     (4, 2, None)
-    >>> zeros = nfa({epsilon():[accept]})
+    >>> zeros = nfa({epsilon:[accept]})
     >>> zeros[0] = [zeros]
     >>> all(zeros([0]*i) == i for i in range(10))
     True
-    >>> zeros = nfa({epsilon():[accept]})
+    >>> zeros = nfa({epsilon:[accept]})
     >>> zeros[0] = [zeros]
     >>> zeros = zeros.compile()
     >>> all(zeros([0]*i) == i for i in range(10))
@@ -126,7 +95,7 @@ class nfa(dict):
     5
     >>> b_star_c((c for c in ['b', 'b', 'b', 'b', 'c']))
     5
-    >>> e = epsilon()
+    >>> e = epsilon
     >>> b_star_c[e] = abc
     >>> (b_star_c('a'), b_star_c('b'), b_star_c('c'), b_star_c('d'))
     (1, 1, 1, None)
@@ -140,10 +109,10 @@ class nfa(dict):
     Traceback (most recent call last):
       ...
     ValueError: input must be an iterable
-    >>> a = nfa({'a': nfa({epsilon(): nfa()})})
+    >>> a = nfa({'a': nfa({epsilon: nfa()})})
     >>> a('a', full=False)
     1
-    >>> a = nfa({'a': nfa({epsilon(): nfa({'b': nfa()})})})
+    >>> a = nfa({'a': nfa({epsilon: nfa({'b': nfa()})})})
     >>> a('a', full=False) is None
     True
     """
@@ -226,7 +195,7 @@ class nfa(dict):
 
         >>> (bool(nfa()), bool(nfa({'a': nfa()})))
         (True, False)
-        >>> empty = nfa({epsilon(): nfa()})
+        >>> empty = nfa({epsilon: nfa()})
         >>> (empty(''), empty('', full=False))
         (0, 0)
         >>> empty = empty.compile()
@@ -258,7 +227,7 @@ class nfa(dict):
         >>> cycle = cycle.compile()
         >>> (cycle('a'), cycle('a', full=False))
         (None, None)
-        >>> reject = nfa({epsilon(): -nfa()})
+        >>> reject = nfa({epsilon: -nfa()})
         >>> (reject(''), reject('', full=False))
         (None, None)
         >>> reject = reject.compile()
@@ -320,9 +289,9 @@ class nfa(dict):
         Return a list of zero or more `nfa` instances reachable using transitions
         that match the supplied argument (either epsilon or a symbol).
         """
-        if isinstance(argument, epsilon):
+        if argument == epsilon:
             # Collect all possible branches reachable via empty transitions.
-            (nfas, cont, e) = ({id(self): self}, True, epsilon()) # pylint: disable=C0103
+            (nfas, cont, e) = ({id(self): self}, True, epsilon) # pylint: disable=C0103
             while cont:
                 cont = False
                 for nfa_ in list(nfas.values()):
@@ -356,7 +325,7 @@ class nfa(dict):
         # Update the transition table with entries corresponding to
         # this node.
         updated = False
-        closure = self @ epsilon()
+        closure = self @ epsilon
         for nfa__ in closure:
             if nfa__: # pylint: disable=W0212
                 compiled[id(self)] = None
@@ -367,7 +336,7 @@ class nfa(dict):
 
             # Compile across all transitions from the state/node.
             for symbol in nfa__:
-                if not isinstance(symbol, epsilon):
+                if not symbol == epsilon:
                     for nfa_ in nfa__ @ symbol:
                         # Add entry for the current state/node and symbol if it is not present.
                         if (symbol, id(self)) not in compiled:
@@ -386,7 +355,7 @@ class nfa(dict):
         if updated:
             for nfa__ in closure:
                 for symbol in nfa__:
-                    if not isinstance(symbol, epsilon):
+                    if not symbol == epsilon:
                         for nfa_ in nfa__ @ symbol:
                             nfa_.compile(
                                 _compiled=compiled,
@@ -418,10 +387,10 @@ class nfa(dict):
         ...     if len(state.keys()) > 0
         ... ]
         [[['b', 'c', 'd']], [['c', 'd']], [[]]]
-        >>> none = nfa({_epsilon: nfa()})
+        >>> none = nfa({epsilon: nfa()})
         >>> none('')
         0
-        >>> none = nfa({_epsilon: -nfa()})
+        >>> none = nfa({epsilon: -nfa()})
         >>> none('') is None
         True
         >>> len([s for s in none.states()])
@@ -589,7 +558,7 @@ class nfa(dict):
 
         # Since there is no compiled transition table, attempt to match
         # the supplied string via a recursive traversal through the nodes.
-        closure = self @ epsilon() # Set of all reachable states/nodes.
+        closure = self @ epsilon # Set of all reachable states/nodes.
 
         # Attempt to obtain the next symbol or end the search.
         # The length of each successful match will be collected so that the longest
@@ -732,8 +701,44 @@ class nfa(dict):
 
         return nfa_
 
-# Use symbol for sole instance of singleton class.
-_epsilon = epsilon()
+class epsilon:
+    """
+    Singleton class for the epsilon transition label. Only a sole instance
+    of  this class is ever be created. Therefore, the symbol ``epsilon``
+    exported by this library is assigned the sole *instance* of this class.
+    Thus, the exported exported object ``epsilon`` can be used in any context
+    that expects a transition label.
+
+    >>> nfa({epsilon: nfa()})
+    nfa({epsilon: nfa()})
+    """
+    def __hash__(self):
+        """
+        All instances are the same instance because this is a singleton class.
+        """
+        return 0
+
+    def __eq__(self, other):
+        """
+        All instances are the same instance because this is a singleton class.
+        """
+        return isinstance(self, type(other))
+
+    def __str__(self):
+        """
+        String representation (conforms with exported symbol for epsilon).
+        """
+        return 'epsilon'
+
+    def __repr__(self):
+        """
+        String representation (conforms with exported symbol for epsilon).
+        """
+        return str(self)
+
+# The exported symbol refers to the sole instance of the
+# epsilon transition label class.
+epsilon = epsilon()
 
 if __name__ == "__main__":
     doctest.testmod() # pragma: no cover
