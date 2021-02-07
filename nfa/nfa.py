@@ -109,6 +109,10 @@ class nfa(dict):
     Traceback (most recent call last):
       ...
     ValueError: input must be an iterable
+    >>> accept([epsilon])
+    Traceback (most recent call last):
+      ...
+    ValueError: input cannot contain epsilon
     >>> a = nfa({'a': nfa({epsilon: nfa()})})
     >>> a('a', full=False)
     1
@@ -284,18 +288,38 @@ class nfa(dict):
         setattr(nfa_, "_accept", not bool(self))
         return nfa_
 
-    def __matmul__(self: nfa, argument):
+    def __mod__(self: nfa, argument):
         """
-        Return a list of zero or more `nfa` instances reachable using transitions
-        that match the supplied argument (either epsilon or a symbol).
+        Return a list of zero or more `nfa` instances reachable using any path
+        that has exactly one transition labeled with the supplied argument (and
+        any number of epsilon transitions). If the supplied argument is itself
+        `epsilon`, then all states reachable via zero or more `epsilon`
+        transitions are returned.
+
+        >>> a = nfa({'a': nfa()})
+        >>> b = nfa({epsilon: [a]})
+        >>> c = nfa({epsilon: [a]})
+        >>> b[epsilon].append(c)
+        >>> c[epsilon].append(b)
+        >>> n = nfa({epsilon: [b, c]})
+        >>> len(n % epsilon)
+        4
+        >>> a = nfa({'a': nfa()})
+        >>> b = nfa({epsilon: [a]})
+        >>> c = nfa({epsilon: [a]})
+        >>> b[epsilon].append(c)
+        >>> c[epsilon].append(b)
+        >>> n = nfa({epsilon: [b, c]})
+        >>> len(n % 'a')
+        1
         """
         if argument == epsilon:
-            # Collect all possible branches reachable via empty transitions.
-            (nfas, cont, e) = ({id(self): self}, True, epsilon) # pylint: disable=C0103
+            # Collect all possible branches reachable via epsilon transitions.
+            (nfas, cont) = ({id(self): self}, True) # pylint: disable=C0103
             while cont:
                 cont = False
                 for nfa_ in list(nfas.values()):
-                    nfas_ = nfa_.get(e, [])
+                    nfas_ = nfa_.get(epsilon, [])
                     for nfa__ in [nfas_] if isinstance(nfas_, nfa) else nfas_:
                         if id(nfa__) not in nfas:
                             nfas[id(nfa__)] = nfa__
@@ -304,8 +328,22 @@ class nfa(dict):
             # The dictionary was used for deduplication.
             return nfas.values()
 
-        # If the argument is a symbol, only one step along any
-        # branch is possible.
+        # Return all instances reachable via any path that contains zero or
+        # more epsilon transitions and exactly one transition labeled with
+        # the supplied argument.
+        return {
+            id(nfa___): nfa___
+            for nfa_ in self % epsilon
+            for nfa__ in nfa_ @ argument
+            for nfa___ in nfa__ % epsilon
+        }.values()
+
+    def __matmul__(self: nfa, argument):
+        """
+        Return a list of zero or more `nfa` instances reachable using a single
+        transition that has a label (either epsilon or a symbol) matching the
+        supplied argument.
+        """
         nfas_or_nfa = self.get(argument, [])
         return [nfas_or_nfa] if isinstance(nfas_or_nfa, nfa) else nfas_or_nfa
 
@@ -325,7 +363,7 @@ class nfa(dict):
         # Update the transition table with entries corresponding to
         # this node.
         updated = False
-        closure = self @ epsilon
+        closure = self % epsilon
         for nfa__ in closure:
             if nfa__: # pylint: disable=W0212
                 compiled[id(self)] = None
@@ -375,7 +413,7 @@ class nfa(dict):
         """
         Collect set of all states/nodes (i.e., the corresponding `nfa` instances)
         reachable from this NFA instance, or the set of states reachable via
-        transitions that match the supplied argument.
+        any one transition that has a label matching the supplied argument.
 
         >>> abcd = nfa({'a': nfa({'b': nfa({'c': nfa()})})})
         >>> abcd['a']['b']['d'] = nfa()
@@ -403,8 +441,8 @@ class nfa(dict):
 
             return self._states # pylint: disable=E1101
 
-        # If an argument is supplied, return the subset of states
-        # reachable via matching with the supplied argument.
+        # If an argument is supplied, return the subset of states reachable
+        # via matching one transition with the supplied argument.
         return self @ argument
 
     def symbols(self: nfa):
@@ -558,13 +596,16 @@ class nfa(dict):
 
         # Since there is no compiled transition table, attempt to match
         # the supplied string via a recursive traversal through the nodes.
-        closure = self @ epsilon # Set of all reachable states/nodes.
+        closure = self % epsilon # Set of all reachable states/nodes.
 
         # Attempt to obtain the next symbol or end the search.
         # The length of each successful match will be collected so that the longest
         # match can be chosen (e.g., if matching the full string is not required).
         try:
             symbol = string[_length] # Obtain the next symbol in the string.
+
+            if symbol == epsilon:
+                raise ValueError('input cannot contain epsilon')
 
             # Examine all possible branches reachable via empty transitions.
             # For each branch, find all branches corresponding to the symbol.

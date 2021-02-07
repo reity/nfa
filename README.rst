@@ -98,12 +98,12 @@ Because the ``nfa`` class is derived from ``dict``, it supports all operators an
     >>> m(['b', 'c'])
     2
 
-To retrieve the collection of *all* states that can be reached via paths that involve zero or more epsilon transitions (and no labeled transitions), the built-in infix operator ``@`` can be used (note that this also includes *all* intermediate states along the paths to the first labeled transitions)::
+To retrieve the collection of *all* states that can be reached via paths that involve zero or more epsilon transitions (and no labeled transitions), the built-in infix operator ``%`` can be used (note that this also includes *all* intermediate states along the paths to the first labeled transitions)::
 
     >>> b = nfa({epsilon: nfa({'b': nfa()})})
     >>> c = nfa({'c': nfa()})
     >>> n = nfa({epsilon: [b, c]})
-    >>> for s in (n @ epsilon): print(s)
+    >>> for s in (n % epsilon): print(s)
     ...
     nfa({epsilon: [nfa({epsilon: nfa({'b': nfa()})}), nfa({'c': nfa()})]})
     nfa({epsilon: nfa({'b': nfa()})})
