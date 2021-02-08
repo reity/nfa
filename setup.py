@@ -7,7 +7,7 @@ setup(
     name="nfa",
     version="3.0.0",
     packages=["nfa",],
-    install_requires=["reiter",],
+    install_requires=["reiter~=0.2",],
     license="MIT",
     url="https://github.com/reity/nfa",
     author="Andrei Lapets",

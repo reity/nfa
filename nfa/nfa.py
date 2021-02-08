@@ -8,6 +8,7 @@ serve as edges).
 """
 
 from __future__ import annotations
+from typing import Sequence, Optional, Any
 import doctest
 from collections.abc import Iterable, Collection
 from reiter import reiter
@@ -246,7 +247,7 @@ class nfa(dict):
         setattr(nfa_, "_accept", not bool(self))
         return nfa_
 
-    def __mod__(self: nfa, argument):
+    def __mod__(self: nfa, argument: Any) -> Sequence[nfa]:
         """
         Return a list of zero or more `nfa` instances reachable using any path
         that has exactly one transition labeled with the supplied argument (and
@@ -296,7 +297,7 @@ class nfa(dict):
             for nfa___ in nfa__ % epsilon
         }.values()
 
-    def __matmul__(self: nfa, argument):
+    def __matmul__(self: nfa, argument: Any) -> Sequence[nfa]:
         """
         Return a list of zero or more `nfa` instances reachable using a single
         transition that has a label (either epsilon or a symbol) matching the
@@ -437,7 +438,7 @@ class nfa(dict):
 
         return self
 
-    def states(self: nfa, argument=None):
+    def states(self: nfa, argument: Any=None) -> Sequence[nfa]:
         """
         Collect set of all states (*i.e.*, the corresponding `nfa` instances)
         reachable from this instance, or the set of states reachable via
@@ -472,7 +473,7 @@ class nfa(dict):
         # via matching one transition with the supplied argument.
         return self @ argument
 
-    def symbols(self: nfa):
+    def symbols(self: nfa) -> set:
         """
         Collect set of all symbols found in transitions of the NFA instance
 
@@ -576,7 +577,7 @@ class nfa(dict):
         # node in this NFA instance.
         return dfas[frozenset([id(self)])]
 
-    def __call__(self: nfa, string, full: bool=True, _length=0) -> bool:
+    def __call__(self: nfa, string: Iterable, full: bool=True, _length=0) -> Optional[int]:
         """
         Determine whether a "string" (*i.e.*, iterable sequence of symbols)
         is accepted by this `nfa` instance.
@@ -868,7 +869,7 @@ class epsilon:
     >>> nfa({epsilon: nfa()})
     nfa({epsilon: nfa()})
     """
-    def __hash__(self):
+    def __hash__(self: epsilon) -> int:
         """
         All instances are the same instance because this is a singleton class.
 
@@ -877,7 +878,7 @@ class epsilon:
         """
         return 0
 
-    def __eq__(self, other):
+    def __eq__(self: epsilon, other: epsilon) -> bool:
         """
         All instances are the same instance because this is a singleton class.
 
@@ -886,7 +887,7 @@ class epsilon:
         """
         return isinstance(self, type(other))
 
-    def __str__(self):
+    def __str__(self: epsilon) -> str:
         """
         String representation (conforms with exported symbol for epsilon).
 
@@ -895,7 +896,7 @@ class epsilon:
         """
         return 'epsilon'
 
-    def __repr__(self):
+    def __repr__(self: epsilon) -> str:
         """
         String representation (conforms with exported symbol for epsilon).
 
