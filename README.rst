@@ -18,7 +18,7 @@ Library for defining and working with native Python implementations of nondeterm
 
 Purpose
 -------
-This library makes it possible to concisely construct nondeterministic finite automata (NFAs) using common Python data structures and operators, as well as to perform common operations involving NFAs. NFAs are represented using Python dictionaries, wherein dictionary objects serve as individual states and dictionary entries serve as transitions (with dictionary keys representing transition labels).
+This library makes it possible to concisely construct nondeterministic finite automata (NFAs) using common Python data structures and operators, as well as to perform common operations involving NFAs. NFAs are represented using a class derived from the Python dictionary type, wherein dictionary objects serve as individual states and dictionary entries serve as transitions (with dictionary keys representing transition labels).
 
 Package Installation and Usage
 ------------------------------
@@ -40,7 +40,7 @@ This library makes it possible to concisely construct an NFA. In the example bel
     >>> n(['a', 'b', 'c'])
     3
 
-By default, an empty NFA object ``nfa()`` is an accepting state and a non-empty object is *not* an accepting state. When an NFA Is applied to an iterable of labels that does not traverse a path that leads to an accepting state, ``None`` is returned::
+By default, an empty NFA object ``nfa()`` is an accepting state and a non-empty object is *not* an accepting state. When an NFA is applied to an iterable of labels that does not traverse a path that leads to an accepting state, ``None`` is returned::
 
     >>> n(['a', 'b']) is None
     True

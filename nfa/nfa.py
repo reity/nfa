@@ -14,51 +14,44 @@ from reiter import reiter
 
 class nfa(dict):
     """
-    Class for a nondeterministic finite automaton (also an individual
-    state/node in the NFA state graph).
+    An instance of this class can represent an individual state within a
+    nondeterministic finite automaton (NFA). When a state represented by
+    an instance of this class is understood to be a starting state, it
+    also represents an NFA as a whole that consists of all states that
+    are reachable from the starting state.
 
-    >>> final = nfa()
-    >>> middle = +nfa({456:final})
-    >>> first = nfa({123:middle})
-    >>> (first([123]), first([123, 456]), first([456]))
-    (1, 2, None)
-    >>> first = first.compile()
-    >>> (first([123]), first([123, 456]), first([456]))
-    (1, 2, None)
+    While instances of this class serve as individual NFA states, entries
+    within the instances represent transitions between states (with keys
+    serving as transition labels). In the example below, an NFA with four
+    states and three transitions is defined. The transition labels are
+    ``'a'``, ``'b'``, and ``'c'``.
+
+    >>> n = nfa({'a': nfa({'b': nfa({'c': nfa()})})})
+
+    "Strings" of symbols are represented using iterable sequences of Python
+    values or objects that can serve as dictionary keys. Applying an instance
+    of this class to an iterable sequences of symbols returns the length (as
+    an integer) of the longest path that (1) traverses an ordered sequence of
+    transitions whose labels match the sequence of symbols supplied as the
+    argument and (1) terminates at an accepting state.
+
+    >>> n(['a', 'b', 'c'])
+    3
+
+    The ``epsilon`` object can be used to represent unlabeled transitions.
+
+    >>> a = nfa({'a': nfa({epsilon: nfa()})})
+    >>> a('a', full=False)
+    1
+    >>> a = nfa({'a': nfa({epsilon: nfa({'b': nfa()})})})
+    >>> a('a', full=False) is None
+    True
+
+    Increasingly complex NFAs can be represented by building up instances of
+    this class; cycles can be introduced by adding references to instances that
+    have already been defined.
+
     >>> accept = nfa()
-    >>> three = nfa({3:accept})
-    >>> two = nfa({2:three})
-    >>> one = nfa({1:two})
-    >>> zero = nfa({0:one, 2:three})
-    >>> (zero([0, 1, 2, 3]), zero([2, 3]), zero([2, 2, 3]))
-    (4, 2, None)
-    >>> (zero([0, 1, 2, 3, 4], full=False), zero([2, 3, 4], full=False), zero([2], full=False))
-    (4, 2, None)
-    >>> zero = nfa({0:one, epsilon:[two, three]}).compile()
-    >>> (zero([0, 1, 2, 3]), zero([2, 3]), zero([3]), zero([2, 2, 3]))
-    (4, 2, 1, None)
-    >>> (zero([0, 1, 2, 3, 4], full=False), zero([2, 3, 4], full=False), zero([2], full=False))
-    (4, 2, None)
-    >>> zeros = nfa({epsilon:[accept]})
-    >>> zeros[0] = [zeros]
-    >>> all(zeros([0]*i) == i for i in range(10))
-    True
-    >>> zeros = nfa({epsilon:[accept]})
-    >>> zeros[0] = [zeros]
-    >>> zeros = zeros.compile()
-    >>> all(zeros([0]*i) == i for i in range(10))
-    True
-    >>> zeros = nfa({0:[accept]})
-    >>> zeros[0].append(zeros)
-    >>> all(zeros([0]*i) == i for i in range(1, 10))
-    True
-    >>> all(zeros([0]*i, full=False) == i for i in range(1, 10))
-    True
-    >>> zeros = zeros.compile()
-    >>> all(zeros([0]*i) == i for i in range(1, 10))
-    True
-    >>> all(zeros([0]*i, full=False) == i for i in range(1, 10))
-    True
     >>> abc = nfa({'a':accept, 'b':accept, 'c':accept})
     >>> abc('a')
     1
@@ -95,49 +88,34 @@ class nfa(dict):
     5
     >>> b_star_c((c for c in ['b', 'b', 'b', 'b', 'c']))
     5
-    >>> e = epsilon
-    >>> b_star_c[e] = abc
+    >>> b_star_c[epsilon] = abc
     >>> (b_star_c('a'), b_star_c('b'), b_star_c('c'), b_star_c('d'))
     (1, 1, 1, None)
-    >>> abc[e] = abc
+    >>> abc[epsilon] = abc
     >>> (abc('a'), abc('b'), abc('c'), abc('d'))
     (1, 1, 1, None)
-    >>> b_star_c[e] = [abc, b_star_c]
+    >>> b_star_c[epsilon] = [abc, b_star_c]
     >>> (b_star_c('a'), b_star_c('b'), b_star_c('c'), b_star_c('d'))
     (1, 1, 1, None)
-    >>> accept(123)
-    Traceback (most recent call last):
-      ...
-    ValueError: input must be an iterable
-    >>> accept([epsilon])
-    Traceback (most recent call last):
-      ...
-    ValueError: input cannot contain epsilon
-    >>> a = nfa({'a': nfa({epsilon: nfa()})})
-    >>> a('a', full=False)
-    1
-    >>> a = nfa({'a': nfa({epsilon: nfa({'b': nfa()})})})
-    >>> a('a', full=False) is None
-    True
     """
     def __new__(cls, argument=None):
         """
         Constructor for an instance that enforces constraints on argument types
-        (i.e., NFA instances can only have other NFA instances or lists/tuples
+        (*i.e.*, NFA instances can only have other NFA instances or lists/tuples
         thereof as values).
 
         >>> nfa()
         nfa()
-        >>> len(nfa({'a': nfa()}))
-        1
-        >>> len(nfa({'a': [nfa()]}))
-        1
-        >>> len(nfa({'a': (nfa(),)}))
-        1
-        >>> len(nfa([('x', nfa())]))
-        1
-        >>> len(nfa(list(zip(['a', 'b'], [nfa(), nfa()]))))
-        2
+        >>> n = nfa({'a': nfa()})
+        >>> n = nfa({'a': [nfa()]})
+        >>> n = nfa({'a': (nfa(),)})
+        >>> n = nfa([('x', nfa())])
+        >>> n = nfa(list(zip(['a', 'b'], [nfa(), nfa()])))
+
+        Any attempt to construct an ``nfa`` instance that does not contain other
+        ``nfa`` instances (or lists/tuples of ``nfa`` instances) raises an
+        exception.
+
         >>> len(nfa(zip(['a', 'b'], [nfa(), nfa()])))
         Traceback (most recent call last):
           ...
@@ -194,60 +172,41 @@ class nfa(dict):
 
     def __bool__(self: nfa) -> bool:
         """
-        Return a boolean indicating whether the state/node represented
-        by this `nfa` instance is an accepting state.
+        Return a boolean indicating whether the state represented by this ``nfa``
+        instance is an accepting state.
 
-        >>> (bool(nfa()), bool(nfa({'a': nfa()})))
-        (True, False)
-        >>> empty = nfa({epsilon: nfa()})
-        >>> (empty(''), empty('', full=False))
-        (0, 0)
-        >>> empty = empty.compile()
-        >>> (empty(''), empty('', full=False))
-        (0, 0)
-        >>> (empty('a'), empty('a', full=False))
-        (None, 0)
-        >>> empty = empty.compile()
-        >>> (empty('a'), empty('a', full=False))
-        (None, 0)
-        >>> a = nfa({'a': nfa()})
-        >>> (a(''), a('', full=False))
-        (None, None)
-        >>> a = a.compile()
-        >>> (a(''), a('', full=False))
-        (None, None)
-        >>> a = +a
-        >>> a('', full=False)
-        0
-        >>> a = a.compile()
-        >>> a('', full=False)
-        0
+        Be default, a non-empty instance *is not* an accepting state and an
+        empty instance *is* an accepting state.
+
+        >>> bool(nfa())
+        True
+        >>> bool(nfa({'a': nfa()}))
+        False
+
+        Modifying an empty instance by adding a transition entry to it causes
+        it to become a non-accepting state. In the example below, ``cycle``
+        does not accept any string because it contains no accepting states.
+
         >>> cycle = nfa()
         >>> cycle['a'] = cycle
         >>> bool(cycle)
         False
-        >>> (cycle('a'), cycle('a', full=False))
-        (None, None)
-        >>> cycle = cycle.compile()
-        >>> (cycle('a'), cycle('a', full=False))
-        (None, None)
-        >>> reject = nfa({epsilon: -nfa()})
-        >>> (reject(''), reject('', full=False))
-        (None, None)
-        >>> reject = reject.compile()
-        >>> (reject(''), reject('', full=False))
-        (None, None)
+        >>> cycle('a') is None
+        True
         """
         # pylint: disable=E1101
         return len(self) == 0 if not hasattr(self, "_accept") else self._accept
 
     def __pos__(self: nfa) -> nfa:
         """
-        Return a shallow copy of this NFA with the state/node represented
+        Return a shallow copy of this instance with the state represented
         by this `nfa` instance marked as an accepting state.
 
-        >>> a = nfa({'a': +nfa({'b': nfa()})})
-        >>> a('a')
+        >>> n = nfa({'a': nfa({'b': nfa()})})
+        >>> n('a') is None
+        True
+        >>> n = nfa({'a': +nfa({'b': nfa()})})
+        >>> n('a')
         1
         """
         nfa_ = nfa(self.items())
@@ -256,13 +215,13 @@ class nfa(dict):
 
     def __neg__(self: nfa) -> nfa:
         """
-        Return a shallow copy of this NFA with the state/node represented
+        Return a shallow copy of this instance with the state represented
         by this `nfa` instance marked as a non-accepting state.
 
         >>> none = nfa({'a': nfa({'b': -nfa()})})
         >>> none('a') is None
         True
-        >>> none('ab', full=False) is None
+        >>> none(['a', 'b'], full=False) is None
         True
         """
         nfa_ = nfa(self.items())
@@ -271,17 +230,16 @@ class nfa(dict):
 
     def __invert__(self: nfa) -> nfa:
         """
-        Return a shallow copy of this NFA with the state/node represented
-        by this `nfa` instance marked with an accepting status that is the
-        opposite of the original node.
+        Return a shallow copy of this instance that has an accepting status
+        that is the opposite of the accepting status of this instance.
 
         >>> none = nfa({'a': nfa({'b': ~nfa()})})
         >>> none('a') is None
         True
-        >>> none('ab', full=False) is None
+        >>> none(['a', 'b'], full=False) is None
         True
         >>> none['a']['b'] = ~none['a']['b']
-        >>> none('ab')
+        >>> none(['a', 'b'])
         2
         """
         nfa_ = nfa(self.items())
@@ -343,14 +301,84 @@ class nfa(dict):
         Return a list of zero or more `nfa` instances reachable using a single
         transition that has a label (either epsilon or a symbol) matching the
         supplied argument.
+
+        >>> n = nfa({'a': nfa({'b': nfa({'c': nfa()})})})
+        >>> n @ 'a'
+        [nfa({'b': nfa({'c': nfa()})})]
+        >>> n @ 'b'
+        []
+        >>> n = nfa({epsilon: [nfa({'a': nfa()}), nfa({'b': nfa()})]})
+        >>> n @ epsilon
+        [nfa({'a': nfa()}), nfa({'b': nfa()})]
         """
         nfas_or_nfa = self.get(argument, [])
         return [nfas_or_nfa] if isinstance(nfas_or_nfa, nfa) else nfas_or_nfa
 
     def compile(self: nfa, _compiled=None, _states=None, _ids=None):
         """
-        Compile NFA represented by this instance (i.e., acting as the initial
-        state/node) into a transition table and save it as a private attribute.
+        Compile the NFA represented by this instance (*i.e.*, the NFA in which
+        this instance is the starting state) into a transition table and save
+        the table as a private attribute.
+
+        >>> final = nfa()
+        >>> middle = +nfa({456: final})
+        >>> first = nfa({123: middle})
+        >>> (first([123]), first([123, 456]), first([456]))
+        (1, 2, None)
+        >>> first = first.compile()
+        >>> (first([123]), first([123, 456]), first([456]))
+        (1, 2, None)
+
+        Compilation can improve performance when applying instances to iterable
+        sequences of symbols.
+
+        >>> zeros = nfa({epsilon: nfa()})
+        >>> zeros[0] = [zeros]
+        >>> zeros = zeros.compile()
+        >>> all(zeros([0] * i) == i for i in range(10))
+        True
+
+        Compilation does not affect what sequences are accepted, and invoking
+        this method multiple times for the same instance has no new effects.
+
+        >>> empty = nfa({epsilon: nfa()})
+        >>> (empty(''), empty('', full=False))
+        (0, 0)
+        >>> empty = empty.compile()
+        >>> (empty(''), empty('', full=False))
+        (0, 0)
+        >>> (empty('a'), empty('a', full=False))
+        (None, 0)
+        >>> empty = empty.compile()
+        >>> (empty('a'), empty('a', full=False))
+        (None, 0)
+        >>> a = nfa({'a': nfa()})
+        >>> (a(''), a('', full=False))
+        (None, None)
+        >>> a = a.compile()
+        >>> (a(''), a('', full=False))
+        (None, None)
+        >>> a = +a
+        >>> a('', full=False)
+        0
+        >>> a = a.compile()
+        >>> a('', full=False)
+        0
+        >>> cycle = nfa()
+        >>> cycle['a'] = cycle
+        >>> bool(cycle)
+        False
+        >>> (cycle('a'), cycle('a', full=False))
+        (None, None)
+        >>> cycle = cycle.compile()
+        >>> (cycle('a'), cycle('a', full=False))
+        (None, None)
+        >>> reject = nfa({epsilon: -nfa()})
+        >>> (reject(''), reject('', full=False))
+        (None, None)
+        >>> reject = reject.compile()
+        >>> (reject(''), reject('', full=False))
+        (None, None)
         """
         compiled = {} if _compiled is None else _compiled
         ids = [] if _ids is None else _ids
@@ -411,8 +439,8 @@ class nfa(dict):
 
     def states(self: nfa, argument=None):
         """
-        Collect set of all states/nodes (i.e., the corresponding `nfa` instances)
-        reachable from this NFA instance, or the set of states reachable via
+        Collect set of all states (*i.e.*, the corresponding `nfa` instances)
+        reachable from this instance, or the set of states reachable via
         any one transition that has a label matching the supplied argument.
 
         >>> abcd = nfa({'a': nfa({'b': nfa({'c': nfa()})})})
@@ -425,12 +453,11 @@ class nfa(dict):
         ...     if len(state.keys()) > 0
         ... ]
         [[['b', 'c', 'd']], [['c', 'd']], [[]]]
+
+        All states (including accepting empty states and states that have
+        only epsilon transitions) are included.
+
         >>> none = nfa({epsilon: nfa()})
-        >>> none('')
-        0
-        >>> none = nfa({epsilon: -nfa()})
-        >>> none('') is None
-        True
         >>> len([s for s in none.states()])
         2
         """
@@ -459,8 +486,9 @@ class nfa(dict):
 
     def to_dfa(self: nfa) -> nfa:
         """
-        Compile NFA represented by this instance (i.e., acting as the initial
-        state/node) into a DFA that accepts the same language.
+        Compile the NFA represented by this instance (*i.e.*, the NFA in which
+        this instance is the starting state) into a DFA that accepts the same
+        set of symbol sequences.
 
         >>> final = nfa()
         >>> middle = +nfa({456:final})
@@ -544,13 +572,76 @@ class nfa(dict):
                 if state == state_:
                     dfa[symbol] = dfas[frozenset(t_dfa[(symbol, state_)])]
 
-        # The new DFA has a starting node that corresponds to starting node in this NFA instance.
+        # The new DFA has a starting node that corresponds to starting
+        # node in this NFA instance.
         return dfas[frozenset([id(self)])]
 
     def __call__(self: nfa, string, full: bool=True, _length=0) -> bool:
         """
-        Determine whether a "string" (i.e., iterable) of symbols
-        is accepted by the `nfa` instance.
+        Determine whether a "string" (*i.e.*, iterable sequence of symbols)
+        is accepted by this `nfa` instance.
+
+        >>> final = nfa()
+        >>> middle = +nfa({456:final})
+        >>> first = nfa({123:middle})
+        >>> (first([123]), first([123, 456]), first([456]))
+        (1, 2, None)
+        >>> first = first.compile()
+        >>> (first([123]), first([123, 456]), first([456]))
+        (1, 2, None)
+        >>> accept = nfa()
+        >>> three = nfa({3:accept})
+        >>> two = nfa({2:three})
+        >>> one = nfa({1:two})
+        >>> zero = nfa({0:one, 2:three})
+        >>> (zero([0, 1, 2, 3]), zero([2, 3]), zero([2, 2, 3]))
+        (4, 2, None)
+        >>> (zero([0, 1, 2, 3, 4], full=False), zero([2, 3, 4], full=False), zero([2], full=False))
+        (4, 2, None)
+        >>> zero = nfa({0:one, epsilon:[two, three]}).compile()
+        >>> (zero([0, 1, 2, 3]), zero([2, 3]), zero([3]), zero([2, 2, 3]))
+        (4, 2, 1, None)
+        >>> (zero([0, 1, 2, 3, 4], full=False), zero([2, 3, 4], full=False), zero([2], full=False))
+        (4, 2, None)
+        >>> zeros = nfa({epsilon:[accept]})
+        >>> zeros[0] = [zeros]
+        >>> all(zeros([0]*i) == i for i in range(10))
+        True
+        >>> zeros = nfa({0:[accept]})
+        >>> zeros[0].append(zeros)
+        >>> all(zeros([0]*i) == i for i in range(1, 10))
+        True
+        >>> all(zeros([0]*i, full=False) == i for i in range(1, 10))
+        True
+        >>> zeros = zeros.compile()
+        >>> all(zeros([0]*i) == i for i in range(1, 10))
+        True
+        >>> all(zeros([0]*i, full=False) == i for i in range(1, 10))
+        True
+
+        A sequence of symbols of length zero is accepted if only epsilon
+        transitions are traversed to reach an accepting state. If no
+        accepting state can be reached, it is rejected.
+
+        >>> none = nfa({epsilon: nfa()})
+        >>> none('')
+        0
+        >>> none = nfa({epsilon: -nfa()})
+        >>> none('') is None
+        True
+
+        Any attempt to apply an instance to a non-sequence or other invalid
+        argument raises an exception.
+
+        >>> accept = nfa()
+        >>> accept(123)
+        Traceback (most recent call last):
+          ...
+        ValueError: input must be an iterable
+        >>> accept([epsilon])
+        Traceback (most recent call last):
+          ...
+        ValueError: input cannot contain epsilon
         """
         if not isinstance(string, (Iterable, reiter)):
             raise ValueError('input must be an iterable')
@@ -643,7 +734,41 @@ class nfa(dict):
 
     def __str__(self: nfa, _visited=frozenset()) -> str:
         """
-        Return string representation of instance.
+        Return string representation of instance. Instances that represent small
+        NFAs that do not contain cycles yield strings that can be evaluated.
+
+        >>> nfa()
+        nfa()
+        >>> nfa({'a': nfa({'b':(nfa(),)})})
+        nfa({'a': nfa({'b': (nfa(),)})})
+        >>> nfa({'a': [nfa({'b': [nfa()]})]})
+        nfa({'a': [nfa({'b': [nfa()]})]})
+
+        Instances that have been designated as accepting (or as non-accepting)
+        in a manner that deviates from the default are marked as such with the
+        appropriate prefix operator.
+
+        >>> +nfa({'a': nfa()})
+        +nfa({'a': nfa()})
+        >>> +nfa({'a': -nfa()})
+        +nfa({'a': -nfa()})
+
+        Instances that have cycles are not converted into a string beyond any
+        depth at which a state repeats.
+
+        >>> cycle = nfa({'a': nfa()})
+        >>> cycle['a']['b'] = cycle
+        >>> cycle
+        nfa({'a': nfa({'b': nfa({...})})})
+
+        Any attempt to convert an instance that contains invalid values into a
+        string raises an exception.
+
+        >>> cycle['a'] = 123
+        >>> cycle
+        Traceback (most recent call last):
+          ...
+        TypeError: values must be nfa instances or non-empty lists/tuples of nfa instances
         """
         # Avoid unbounded recursion.
         if id(self) in _visited:
@@ -683,40 +808,30 @@ class nfa(dict):
 
     def __repr__(self: nfa) -> str:
         """
-        Return string representation of instance.
-
-        >>> nfa({'a': nfa({'b':(nfa(),)})})
-        nfa({'a': nfa({'b': (nfa(),)})})
-        >>> nfa({'a': [nfa({'b': [nfa()]})]})
-        nfa({'a': [nfa({'b': [nfa()]})]})
-        >>> nfa()
-        nfa()
-        >>> +nfa({'a': nfa()})
-        +nfa({'a': nfa()})
-        >>> +nfa({'a': -nfa()})
-        +nfa({'a': -nfa()})
-        >>> cycle = nfa({'a': nfa()})
-        >>> cycle['a']['b'] = cycle
-        >>> cycle
-        nfa({'a': nfa({'b': nfa({...})})})
-        >>> cycle['a'] = 123
-        >>> cycle
-        Traceback (most recent call last):
-          ...
-        TypeError: values must be nfa instances or non-empty lists/tuples of nfa instances
+        Return string representation of instance. Instances that represent small
+        NFAs that do not contain cycles yield strings that can be evaluated.
         """
         return str(self)
 
     def copy(self: nfa, _memo=None) -> nfa:
         """
-        Return a deep copy of this NFA in which all NFA instances
-        are copies but all other references are not copies.
+        Return a deep copy of this instance in which all reachable instances of
+        ``nfa`` are new copies but references to all other objects are not copies.
+
+        >>> m = nfa({'a': nfa({'b': nfa({'c': nfa()})})})
+        >>> n = m.copy()
+        >>> n('abc')
+        3
+        >>> set(map(id, m.states())) & set(map(id, n.states()))
+        set()
+
+        This method behaves as expected when cycles exist.
 
         >>> a_star = +nfa()
         >>> a_star['a'] = a_star
         >>> a_star['b'] = [nfa()]
         >>> a_star_ = a_star.copy()
-        >>> all(a_star_('a'*i) == i for i in range(10))
+        >>> all(a_star_('a' * i) == i for i in range(10))
         True
         >>> a_star_('b')
         1
@@ -756,24 +871,36 @@ class epsilon:
     def __hash__(self):
         """
         All instances are the same instance because this is a singleton class.
+
+        >>> {epsilon, epsilon}
+        {epsilon}
         """
         return 0
 
     def __eq__(self, other):
         """
         All instances are the same instance because this is a singleton class.
+
+        >>> epsilon == epsilon
+        True
         """
         return isinstance(self, type(other))
 
     def __str__(self):
         """
         String representation (conforms with exported symbol for epsilon).
+
+        >>> str(epsilon)
+        'epsilon'
         """
         return 'epsilon'
 
     def __repr__(self):
         """
         String representation (conforms with exported symbol for epsilon).
+
+        >>> epsilon
+        epsilon
         """
         return str(self)
 

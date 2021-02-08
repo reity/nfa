@@ -58,7 +58,7 @@ def nfas(alphabet):
 
         # A new state/node can associate each of the alphabet symbols to any
         # subset of the above NFAs. Thus, collect all subsets of above NFAs.
-        nss = list([ns_ for ns_ in powerset(ns) if len(ns_) > 0])
+        nss = [ns_ for ns_ in powerset(ns) if len(ns_) > 0]
 
         # Iterate over every non-empty subset of symbols.
         for ss in [ss for ss in powerset(alphabet + [epsilon]) if len(ss) > 0]:
