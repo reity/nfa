@@ -522,6 +522,13 @@ class nfa(dict):
         True
         >>> a_star('b') is None
         True
+        >>> n = nfa()
+        >>> n[epsilon] = n
+        >>> n([]) is None
+        True
+        >>> d = n.to_dfa()
+        >>> d([]) is None
+        True
         """
         # The DFA transition table is built using the NFA transition table.
         if not hasattr(self, '_compiled'):
@@ -563,7 +570,7 @@ class nfa(dict):
         # Build states/nodes for DFA and mark them as accepting states/nodes
         # if they are such.
         dfas = {
-            state: (+nfa() if any(i in t_nfa and t_nfa[i] is None for i in state) else nfa())
+            state: (+nfa() if any(i in t_nfa and t_nfa[i] is None for i in state) else -nfa())
             for state in states
         }
 
@@ -650,7 +657,6 @@ class nfa(dict):
 
         # If the NFA represented by this instance has been compiled, attempt
         # to match the supplied string via the compiled transition table.
-
         if hasattr(self, "_compiled") and self._compiled is not None: # pylint: disable=E1101
             lengths = set() # Lengths of paths that led to an accepting state/node.
             ids_ = set([id(self)]) # Working set of states/nodes during multi-branch traversal.
