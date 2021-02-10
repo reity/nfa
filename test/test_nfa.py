@@ -79,6 +79,18 @@ def nfas(alphabet):
                     ns.append(n)
                     yield n
 
+class Test_epsilon(TestCase):
+    """
+    Unit tests of the epsilon transition label class.
+    """
+    def test_epsilon(self):
+        """
+        Basic unit tests of the sole epsilon transition label object.
+        """
+        self.assertTrue(epsilon == epsilon) # pylint: disable=R0124
+        self.assertTrue(str(epsilon) == 'epsilon')
+        self.assertTrue(len({epsilon, epsilon}) == 1)
+
 class Test_nfa(TestCase):
     """
     Functional unit tests of data structure methods.

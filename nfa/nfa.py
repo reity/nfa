@@ -900,7 +900,7 @@ class epsilon:
         >>> str(epsilon)
         'epsilon'
         """
-        return 'epsilon'
+        return repr(self)
 
     def __repr__(self: epsilon) -> str:
         """
@@ -909,7 +909,10 @@ class epsilon:
         >>> epsilon
         epsilon
         """
-        return str(self)
+        return 'epsilon'
+
+# Retain an alias for the class in scope so that doctests are executed.
+_epsilon = epsilon # pylint: disable=C0103
 
 # The exported symbol refers to the sole instance of the
 # epsilon transition label class.
