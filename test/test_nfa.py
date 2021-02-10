@@ -79,6 +79,9 @@ def nfas(alphabet):
                     ns.append(n)
                     yield n
 
+nfas_for_tests = list(islice(nfas(['a', 'b']), 0, 1000))
+strs_for_tests = list(strs(['a', 'b'], 7))
+
 class Test_epsilon(TestCase):
     """
     Unit tests of the epsilon transition label class.
@@ -99,8 +102,8 @@ class Test_nfa(TestCase):
         """
         Basic unit tests of default full string matching functionality.
         """
-        for nfa_ in islice(nfas(['a', 'b']), 0, 1000):
-            for s in strs(['a', 'b'], 7):
+        for (i, nfa_) in enumerate(nfas_for_tests):
+            for s in sample(strs_for_tests, max(1, len(strs_for_tests) // (i + 1))):
                 match = nfa_(s)
                 self.assertTrue((isinstance(match, int) and match == len(s)) or match is None)
 
@@ -108,19 +111,19 @@ class Test_nfa(TestCase):
         """
         Basic unit tests of partial string matching functionality.
         """
-        for nfa_ in islice(nfas(['a', 'b']), 0, 1000):
-            for s in strs(['a', 'b'], 7):
-                s += ('c', 'd')
-                match = nfa_(s, full=False)
-                self.assertTrue((isinstance(match, int) and match <= len(s) - 2) or match is None)
+        for (i, nfa_) in enumerate(nfas_for_tests):
+            for s in sample(strs_for_tests, max(1, len(strs_for_tests) // (i + 1))):
+                s_ = s + ('c', 'd')
+                match = nfa_(s_, full=False)
+                self.assertTrue((isinstance(match, int) and match <= len(s_) - 2) or match is None)
 
     def test_nfa_compile(self):
         """
         Unit tests of instance compilation method and table-based matching functionality.
         """
-        for nfa_ in islice(nfas(['a', 'b']), 0, 1000):
+        for (i, nfa_) in enumerate(nfas_for_tests):
             for full in (True, False):
-                ss = list(strs(['a', 'b'], 7))
+                ss = list(sample(strs_for_tests, max(1, len(strs_for_tests) // (i + 1))))
                 sms_nfa_ = set((s, m) for s in ss for m in [nfa_(s, full)])
                 nfa_ = nfa_.compile()
                 sms_nfa_compiled = set((s, m) for s in ss for m in [nfa_(s, full)])
@@ -130,9 +133,9 @@ class Test_nfa(TestCase):
         """
         Unit tests of instance DFA conversion method.
         """
-        for nfa_ in islice(nfas(['a', 'b']), 0, 1000):
+        for (i, nfa_) in enumerate(nfas_for_tests):
             for full in (True, False):
-                ss = list(strs(['a', 'b'], 7))
+                ss = list(sample(strs_for_tests, max(1, len(strs_for_tests) // (i + 1))))
                 sms_nfa_ = set((s, m) for s in ss for m in [nfa_(s, full)])
                 dfa_ = nfa_.to_dfa()
                 sms_dfa_ = set((s, m) for s in ss for m in [dfa_(s, full)])
