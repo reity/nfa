@@ -1,11 +1,14 @@
 from setuptools import setup
 
 with open("README.rst", "r") as fh:
-    long_description = fh.read()
+    long_description = fh.read().replace(".. include:: toc.rst\n\n", "")
+
+# The line below is parsed by `docs/conf.py`.
+version = "3.0.0"
 
 setup(
     name="nfa",
-    version="3.0.0",
+    version=version,
     packages=["nfa",],
     install_requires=["reiter~=0.2",],
     license="MIT",

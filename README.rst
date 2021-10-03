@@ -112,6 +112,16 @@ To retrieve the collection of *all* states that can be reached via paths that in
 
 Other methods make it possible to retrieve all the states found in an NFA, to compile an NFA (enabling more efficient processing of iterables), and to compile an NFA into a deterministic finite automaton (DFA). Descriptions and examples of these methods can be found in the documentation for the main library module.
 
+Documentation
+-------------
+.. include:: toc.rst
+
+The documentation can be generated automatically from the source files using `Sphinx <https://www.sphinx-doc.org/>`_::
+
+    python -m pip install sphinx sphinx-rtd-theme
+    cd docs
+    sphinx-apidoc -f -E --templatedir=_templates -o _source .. ../setup.py && make html
+
 Testing and Conventions
 -----------------------
 All unit tests are executed and their coverage is measured when using `nose <https://nose.readthedocs.io/>`_ (see ``setup.cfg`` for configution details)::
