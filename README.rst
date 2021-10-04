@@ -33,7 +33,7 @@ The library can be imported in the usual way::
 
 Examples
 ^^^^^^^^
-This library makes it possible to concisely construct an NFA. In the example below, an NFA is defined in which transition labels are strings. It is then applied to an iterable of strings. This returns the length (as an integer) of the longest path that (1) traverses an ordered sequence of transitions whose labels match the sequence of symbols supplied as the argument and (1) terminates at an accepting state::
+This library makes it possible to concisely construct an NFA. In the example below, an NFA is defined in which transition labels are strings. It is then applied to an iterable of strings. This returns the length (as an integer) of the longest path that (1) traverses an ordered sequence of transitions whose labels match the sequence of symbols supplied as the argument and (2) terminates at an accepting state::
 
     >>> from nfa import nfa
     >>> n = nfa({'a': nfa({'b': nfa({'c': nfa()})})})

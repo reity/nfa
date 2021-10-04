@@ -1,12 +1,9 @@
-"""Data structure for nondeterministic finite automata.
-
-Python data structure derived from dict that can represent
-nondeterministic finite automata (NFAs) as an ensemble of
-dictionaries (where dictionary instances serve as nodes,
-dictionary keys serve as edge labels, and dictionary values
-serve as edges).
 """
-
+Python data structure derived from the built-in :class:`dict <dict>` type
+that can represent nondeterministic finite automata (NFAs) as an ensemble
+of dictionaries (where dictionary instances serve as nodes, dictionary keys
+serve as edge labels, and dictionary values serve as edges).
+"""
 from __future__ import annotations
 from typing import Sequence, Optional, Any
 import doctest
@@ -19,7 +16,7 @@ class nfa(dict):
     nondeterministic finite automaton (NFA). When a state represented by
     an instance of this class is understood to be a starting state, it
     also represents an NFA as a whole that consists of all states that
-    are reachable from the starting state.
+    are reachable from that starting state.
 
     While instances of this class serve as individual NFA states, entries
     within the instances represent transitions between states (with keys
@@ -29,17 +26,19 @@ class nfa(dict):
 
     >>> n = nfa({'a': nfa({'b': nfa({'c': nfa()})})})
 
-    "Strings" of symbols are represented using iterable sequences of Python
+    *Strings of symbols* (in the formal sense associated with the formal
+    definition of NFAs) are represented using iterable sequences of Python
     values or objects that can serve as dictionary keys. Applying an instance
     of this class to an iterable sequences of symbols returns the length (as
     an integer) of the longest path that (1) traverses an ordered sequence of
     transitions whose labels match the sequence of symbols supplied as the
-    argument and (1) terminates at an accepting state.
+    argument and (2) terminates at an accepting state.
 
     >>> n(['a', 'b', 'c'])
     3
 
-    The ``epsilon`` object can be used to represent unlabeled transitions.
+    The :obj:`epsilon` object defined within this module can be used to represent
+    unlabeled transitions.
 
     >>> a = nfa({'a': nfa({epsilon: nfa()})})
     >>> a('a', full=False)
@@ -113,8 +112,8 @@ class nfa(dict):
         >>> n = nfa([('x', nfa())])
         >>> n = nfa(list(zip(['a', 'b'], [nfa(), nfa()])))
 
-        Any attempt to construct an ``nfa`` instance that does not contain other
-        ``nfa`` instances (or lists/tuples of ``nfa`` instances) raises an
+        Any attempt to construct an :obj:`nfa` instance that does not contain other
+        :obj:`nfa` instances (or lists/tuples of :obj:`nfa` instances) raises an
         exception.
 
         >>> len(nfa(zip(['a', 'b'], [nfa(), nfa()])))
@@ -173,7 +172,7 @@ class nfa(dict):
 
     def __bool__(self: nfa) -> bool:
         """
-        Return a boolean indicating whether the state represented by this ``nfa``
+        Return a boolean indicating whether the state represented by this :obj:`nfa`
         instance is an accepting state.
 
         Be default, a non-empty instance *is not* an accepting state and an
@@ -201,7 +200,7 @@ class nfa(dict):
     def __pos__(self: nfa) -> nfa:
         """
         Return a shallow copy of this instance with the state represented
-        by this `nfa` instance marked as an accepting state.
+        by this :obj:`nfa` instance marked as an accepting state.
 
         >>> n = nfa({'a': nfa({'b': nfa()})})
         >>> n('a') is None
@@ -217,7 +216,7 @@ class nfa(dict):
     def __neg__(self: nfa) -> nfa:
         """
         Return a shallow copy of this instance with the state represented
-        by this `nfa` instance marked as a non-accepting state.
+        by this :obj:`nfa` instance marked as a non-accepting state.
 
         >>> none = nfa({'a': nfa({'b': -nfa()})})
         >>> none('a') is None
@@ -249,11 +248,11 @@ class nfa(dict):
 
     def __mod__(self: nfa, argument: Any) -> Sequence[nfa]:
         """
-        Return a list of zero or more `nfa` instances reachable using any path
-        that has exactly one transition labeled with the supplied argument (and
-        any number of epsilon transitions). If the supplied argument is itself
-        `epsilon`, then all states reachable via zero or more `epsilon`
-        transitions are returned.
+        Return a list of zero or more :obj:`nfa` instances reachable using any
+        path that has exactly one transition labeled with the supplied argument
+        (and any number of :obj:`epsilon` transitions). If the supplied argument
+        is itself :obj:`epsilon`, then all states reachable via zero or more
+        :obj:`epsilon` transitions are returned.
 
         >>> a = nfa({'a': nfa()})
         >>> b = nfa({epsilon: [a]})
@@ -299,9 +298,9 @@ class nfa(dict):
 
     def __matmul__(self: nfa, argument: Any) -> Sequence[nfa]:
         """
-        Return a list of zero or more `nfa` instances reachable using a single
-        transition that has a label (either epsilon or a symbol) matching the
-        supplied argument.
+        Return a list of zero or more :obj:`nfa` instances reachable using a
+        single transition that has a label (either :obj:`epsilon` or a symbol)
+        matching the supplied argument.
 
         >>> n = nfa({'a': nfa({'b': nfa({'c': nfa()})})})
         >>> n @ 'a'
@@ -318,8 +317,8 @@ class nfa(dict):
     def compile(self: nfa, _compiled=None, _states=None, _ids=None):
         """
         Compile the NFA represented by this instance (*i.e.*, the NFA in which
-        this instance is the starting state) into a transition table and save
-        the table as a private attribute.
+        this instance is the starting state) into a transition table and store
+        the table within a private attribute of this instance.
 
         >>> final = nfa()
         >>> middle = +nfa({456: final})
@@ -440,9 +439,9 @@ class nfa(dict):
 
     def states(self: nfa, argument: Any=None) -> Sequence[nfa]:
         """
-        Collect set of all states (*i.e.*, the corresponding `nfa` instances)
-        reachable from this instance, or the set of states reachable via
-        any one transition that has a label matching the supplied argument.
+        Collect set of all states (*i.e.*, the corresponding :obj:`nfa` instances)
+        reachable from this instance, or the set of states reachable via any *one*
+        transition that has a label matching the supplied argument.
 
         >>> abcd = nfa({'a': nfa({'b': nfa({'c': nfa()})})})
         >>> abcd['a']['b']['d'] = nfa()
@@ -475,7 +474,7 @@ class nfa(dict):
 
     def symbols(self: nfa) -> set:
         """
-        Collect set of all symbols found in transitions of the NFA instance
+        Return set of all symbols found in transitions of this :obj:`nfa` instance.
 
         >>> nfa({'a': nfa({'b': nfa({'c': nfa()})})}).symbols() == {'a', 'b', 'c'}
         True
@@ -488,8 +487,11 @@ class nfa(dict):
     def to_dfa(self: nfa) -> nfa:
         """
         Compile the NFA represented by this instance (*i.e.*, the NFA in which
-        this instance is the starting state) into a DFA that accepts the same
-        set of symbol sequences.
+        this instance is the starting state) into a deterministic finite automaton
+        (DFA) that accepts the same set of symbol sequences. The DFA is represented
+        as an :obj:`nfa` instance but has an internal structure that conforms to the
+        constraints associated with DFAs (*i.e.*, no nondeterministic collections of
+        transitions and no :obj:`epsilon` transitions).
 
         >>> final = nfa()
         >>> middle = +nfa({456:final})
@@ -586,8 +588,9 @@ class nfa(dict):
 
     def __call__(self: nfa, string: Iterable, full: bool=True, _length=0) -> Optional[int]:
         """
-        Determine whether a "string" (*i.e.*, iterable sequence of symbols)
-        is accepted by this `nfa` instance.
+        Determine whether a supplied *string* -- in the formal sense (*i.e.*,
+        any iterable sequence of symbols) -- is accepted by this :obj:`nfa`
+        instance.
 
         >>> final = nfa()
         >>> middle = +nfa({456:final})
@@ -741,8 +744,7 @@ class nfa(dict):
 
     def __str__(self: nfa, _visited=frozenset()) -> str:
         """
-        Return string representation of instance. Instances that represent small
-        NFAs that do not contain cycles yield strings that can be evaluated.
+        Return a string representation of this instance.
 
         >>> nfa()
         nfa()
@@ -750,6 +752,23 @@ class nfa(dict):
         nfa({'a': nfa({'b': (nfa(),)})})
         >>> nfa({'a': [nfa({'b': [nfa()]})]})
         nfa({'a': [nfa({'b': [nfa()]})]})
+
+        Assuming that this module has been imported in a manner such that the
+        :obj:`nfa` class is associated with the variable ``nfa``, instances that
+        represent small NFAs that do not contain cycles yield strings that can be
+        evaluated successfully to reconstruct the instance.
+
+        >>> n = nfa({'a': nfa({'b':(nfa(),)})})
+        >>> eval(str(n))
+        nfa({'a': nfa({'b': (nfa(),)})})
+
+        Instances that have cycles are not converted into a string beyond any
+        depth at which a state repeats.
+
+        >>> cycle = nfa({'a': nfa()})
+        >>> cycle['a']['b'] = cycle
+        >>> cycle
+        nfa({'a': nfa({'b': nfa({...})})})
 
         Instances that have been designated as accepting (or as non-accepting)
         in a manner that deviates from the default are marked as such with the
@@ -759,14 +778,6 @@ class nfa(dict):
         +nfa({'a': nfa()})
         >>> +nfa({'a': -nfa()})
         +nfa({'a': -nfa()})
-
-        Instances that have cycles are not converted into a string beyond any
-        depth at which a state repeats.
-
-        >>> cycle = nfa({'a': nfa()})
-        >>> cycle['a']['b'] = cycle
-        >>> cycle
-        nfa({'a': nfa({'b': nfa({...})})})
 
         Any attempt to convert an instance that contains invalid values into a
         string raises an exception.
@@ -823,7 +834,8 @@ class nfa(dict):
     def copy(self: nfa, _memo=None) -> nfa:
         """
         Return a deep copy of this instance in which all reachable instances of
-        ``nfa`` are new copies but references to all other objects are not copies.
+        :obj:`nfa` are new copies but references to all other objects are not
+        copies.
 
         >>> m = nfa({'a': nfa({'b': nfa({'c': nfa()})})})
         >>> n = m.copy()
@@ -867,10 +879,10 @@ class nfa(dict):
 class epsilon:
     """
     Singleton class for the epsilon transition label. Only a sole instance
-    of  this class is ever be created. Therefore, the symbol ``epsilon``
+    of  this class is ever be created. Therefore, the symbol :obj:`epsilon`
     exported by this library is assigned the sole *instance* of this class.
-    Thus, the exported exported object ``epsilon`` can be used in any context
-    that expects a transition label.
+    Thus, the exported object :obj:`epsilon` can be used in any context that
+    expects a transition label.
 
     >>> nfa({epsilon: nfa()})
     nfa({epsilon: nfa()})
@@ -917,6 +929,14 @@ _epsilon = epsilon # pylint: disable=C0103
 # The exported symbol refers to the sole instance of the
 # epsilon transition label class.
 epsilon = epsilon()
+"""
+Constant representing an *epsilon* transition when used as an edge label
+(*i.e.*, as a key within an :obj:`nfa` instance).
+
+>>> a = nfa({'a': nfa({epsilon: nfa({'b': nfa()})})})
+>>> a('ab')
+2
+"""
 
 if __name__ == "__main__":
     doctest.testmod() # pragma: no cover

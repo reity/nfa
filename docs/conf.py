@@ -34,7 +34,8 @@ release = version
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.doctest',
-    'sphinx.ext.napoleon'
+    'sphinx.ext.napoleon',
+    'sphinx.ext.intersphinx'
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -55,6 +56,9 @@ autodoc_default_options = {
         '__dict__'
     ])
 }
+
+# Allow references to classes defined in the Python documentation.
+intersphinx_mapping = {'python': ('https://docs.python.org/3', None)}
 
 # Remove private parameters from rendered signature.
 def process_signature(app, what, name, obj, options, signature, return_annotation):
