@@ -118,8 +118,8 @@ Documentation
 
 The documentation can be generated automatically from the source files using `Sphinx <https://www.sphinx-doc.org/>`_::
 
-    python -m pip install sphinx sphinx-rtd-theme
     cd docs
+    python -m pip install -r requirements.txt
     sphinx-apidoc -f -E --templatedir=_templates -o _source .. ../setup.py && make html
 
 Testing and Conventions
