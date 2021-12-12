@@ -4,7 +4,7 @@ nfa
 
 Library for defining and working with native Python implementations of nondeterministic finite automata (NFAs).
 
-|pypi| |readthedocs| |travis| |coveralls|
+|pypi| |readthedocs| |actions| |coveralls|
 
 .. |pypi| image:: https://badge.fury.io/py/nfa.svg
    :target: https://badge.fury.io/py/nfa
@@ -14,9 +14,9 @@ Library for defining and working with native Python implementations of nondeterm
    :target: https://nfa.readthedocs.io/en/latest/?badge=latest
    :alt: Read the Docs documentation status.
 
-.. |travis| image:: https://travis-ci.com/reity/nfa.svg?branch=main
-   :target: https://travis-ci.com/reity/nfa
-   :alt: Travis CI build status.
+.. |actions| image:: https://github.com/reity/nfa/workflows/lint-test-cover-docs/badge.svg
+   :target: https://github.com/reity/nfa/actions/workflows/lint-test-cover-docs.yml
+   :alt: GitHub Actions status.
 
 .. |coveralls| image:: https://coveralls.io/repos/github/reity/nfa/badge.svg?branch=main
    :target: https://coveralls.io/github/reity/nfa?branch=main
