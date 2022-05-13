@@ -1,15 +1,12 @@
-"""Bounded exhaustive unit tests for data structure methods.
-
-Test suite in which functional unit tests for matching, compilation,
-and conversion methods are applied to a sample of a bounded subset of
-all possible data structure instances.
 """
-# pylint: disable=C0103
-
+Test suite in which functional unit tests for matching, compilation, and
+conversion methods are applied to a sample of a bounded subset of all
+possible data structure instances.
+"""
 from importlib import import_module
 from itertools import product, islice, chain, combinations
 from random import sample
-from unittest import TestCase
+from unittest import TestCase # pylint: disable=C0411
 
 from nfa.nfa import nfa, epsilon
 
