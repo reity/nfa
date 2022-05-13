@@ -73,6 +73,7 @@ def process_signature(app, what, name, obj, options, signature, return_annotatio
 def setup(app):
     app.connect("autodoc-process-signature", process_signature)
 
+
 # -- Options for HTML output -------------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
