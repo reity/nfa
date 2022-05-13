@@ -5,7 +5,7 @@ with open("README.rst", "r") as fh:
 
 # The lines below can be parsed by `docs/conf.py`.
 name = "nfa"
-version = "3.0.0"
+version = "3.0.1"
 
 setup(
     name=name,
