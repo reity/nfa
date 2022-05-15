@@ -586,6 +586,34 @@ class nfa(dict):
         # node in this NFA instance.
         return dfas[frozenset([id(self)])]
 
+    def is_dfa(self: nfa) -> bool:
+        """
+        Return a boolean that indicates whether the NFA represented by this instance
+        satisfies the definition of a deterministic finite automaton (DFA).
+
+        >>> m = nfa({'a': nfa({'b': nfa({'c': nfa()})})})
+        >>> m.is_dfa()
+        True
+        >>> n = nfa({'d': [m, nfa()]})
+        >>> n.is_dfa()
+        False
+        >>> o = nfa({'e': [nfa({epsilon: m})]})
+        >>> o.is_dfa()
+        False
+        """
+        for state in self.states():
+            if any([
+                (epsilon in state),
+                any(
+                    (len(states) > 1)
+                    for (symbol, states) in self.items()
+                    if not isinstance(states, nfa)
+                )
+            ]):
+                return False
+
+        return True
+
     def __call__(self: nfa, string: Iterable, full: bool=True, _length=0) -> Optional[int]:
         """
         Determine whether a supplied *string* -- in the formal sense (*i.e.*,

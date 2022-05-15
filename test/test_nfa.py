@@ -126,7 +126,7 @@ class Test_nfa(TestCase):
                 sms_nfa_compiled = set((s, m) for s in ss for m in [nfa_(s, full)])
                 self.assertEqual(sms_nfa_, sms_nfa_compiled)
 
-    def test_nfa_to_dfa(self):
+    def test_nfa_to_dfa_is_dfa(self):
         """
         Unit tests of instance DFA conversion method.
         """
@@ -136,4 +136,5 @@ class Test_nfa(TestCase):
                 sms_nfa_ = set((s, m) for s in ss for m in [nfa_(s, full)])
                 dfa_ = nfa_.to_dfa()
                 sms_dfa_ = set((s, m) for s in ss for m in [dfa_(s, full)])
+                self.assertTrue(dfa_.is_dfa())
                 self.assertEqual(sms_nfa_, sms_dfa_)
