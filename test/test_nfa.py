@@ -6,7 +6,7 @@ possible data structure instances.
 from importlib import import_module
 from itertools import product, islice, chain, combinations
 from random import sample
-from unittest import TestCase # pylint: disable=C0411
+from unittest import TestCase
 
 from nfa.nfa import nfa, epsilon
 
@@ -33,11 +33,11 @@ def powerset(iterable):
     Return iterable of all subsets of items in the input.
     """
     s = list(iterable)
-    return chain.from_iterable(combinations(s, r) for r in range(len(s)+1))
+    return chain.from_iterable(combinations(s, r) for r in range(len(s) + 1))
 
 def strs(alphabet, k):
     """
-    Yield all strings of length at most `k` containing
+    Yield all strings of length at most ``k`` containing
     only the characters in the supplied alphabet of symbols.
     """
     for i in range(k):
@@ -87,7 +87,7 @@ class Test_epsilon(TestCase):
         """
         Basic unit tests of the sole epsilon transition label object.
         """
-        self.assertTrue(epsilon == epsilon) # pylint: disable=R0124
+        self.assertTrue(epsilon == epsilon) # pylint: disable=comparison-with-itself
         self.assertTrue(str(epsilon) == 'epsilon')
         self.assertTrue(len({epsilon, epsilon}) == 1)
 

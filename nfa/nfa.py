@@ -1,5 +1,5 @@
 """
-Python data structure derived from the built-in :class:`dict <dict>` type
+Pure-Python data structure derived from the built-in :class:`dict <dict>` type
 that can represent nondeterministic finite automata (NFAs) as an ensemble
 of dictionaries (where dictionary instances serve as nodes, dictionary keys
 serve as edge labels, and dictionary values serve as edges).
@@ -194,8 +194,11 @@ class nfa(dict):
         >>> cycle('a') is None
         True
         """
-        # pylint: disable=E1101
-        return len(self) == 0 if not hasattr(self, "_accept") else self._accept
+        return (
+            len(self) == 0
+            if not hasattr(self, '_accept') else
+            self._accept # pylint: disable=no-member
+        )
 
     def __pos__(self: nfa) -> nfa:
         """
@@ -210,7 +213,7 @@ class nfa(dict):
         1
         """
         nfa_ = nfa(self.items())
-        setattr(nfa_, "_accept", True)
+        setattr(nfa_, '_accept', True)
         return nfa_
 
     def __neg__(self: nfa) -> nfa:
@@ -225,7 +228,7 @@ class nfa(dict):
         True
         """
         nfa_ = nfa(self.items())
-        setattr(nfa_, "_accept", False)
+        setattr(nfa_, '_accept', False)
         return nfa_
 
     def __invert__(self: nfa) -> nfa:
@@ -243,7 +246,7 @@ class nfa(dict):
         2
         """
         nfa_ = nfa(self.items())
-        setattr(nfa_, "_accept", not bool(self))
+        setattr(nfa_, '_accept', not bool(self))
         return nfa_
 
     def __mod__(self: nfa, argument: Any) -> Sequence[nfa]:
@@ -273,7 +276,7 @@ class nfa(dict):
         """
         if argument == epsilon:
             # Collect all possible branches reachable via epsilon transitions.
-            (nfas, cont) = ({id(self): self}, True) # pylint: disable=C0103
+            (nfas, cont) = ({id(self): self}, True)
             while cont:
                 cont = False
                 for nfa_ in list(nfas.values()):
@@ -380,6 +383,7 @@ class nfa(dict):
         >>> (reject(''), reject('', full=False))
         (None, None)
         """
+        # pylint: disable=too-many-branches
         compiled = {} if _compiled is None else _compiled
         ids = [] if _ids is None else _ids
         states = {id(self): self} if _states is None else _states
@@ -393,7 +397,7 @@ class nfa(dict):
         updated = False
         closure = self % epsilon
         for nfa__ in closure:
-            if nfa__: # pylint: disable=W0212
+            if nfa__:
                 compiled[id(self)] = None
 
             # Update the state dictionary with this state/node (to ensure that
@@ -432,8 +436,8 @@ class nfa(dict):
         # If we are at the root invocation, save the state list and
         # transition table as attributes.
         if _compiled is None:
-            setattr(self, "_compiled", compiled)
-            setattr(self, "_states", list(states.values()))
+            setattr(self, '_compiled', compiled)
+            setattr(self, '_states', list(states.values()))
 
         return self
 
@@ -466,7 +470,7 @@ class nfa(dict):
             if not hasattr(self, '_states'):
                 self.compile()
 
-            return self._states # pylint: disable=E1101
+            return self._states # pylint: disable=no-member
 
         # If an argument is supplied, return the subset of states reachable
         # via matching one transition with the supplied argument.
@@ -482,7 +486,11 @@ class nfa(dict):
         if not hasattr(self, '_compiled'):
             self.compile()
 
-        return set(e[0] for e in self._compiled if isinstance(e, tuple)) # pylint: disable=E1101
+        return set(
+            e[0]
+            for e in self._compiled # pylint: disable=no-member
+            if isinstance(e, tuple)
+        )
 
     def to_dfa(self: nfa) -> nfa:
         """
@@ -537,7 +545,7 @@ class nfa(dict):
             self.compile()
 
         # Create empty DFA transition table.
-        (t_nfa, t_dfa) = (self._compiled, {}) # pylint: disable=E1101
+        (t_nfa, t_dfa) = (self._compiled, {}) # pylint: disable=no-member
 
         # Build the deterministic transition table.
         states = [frozenset([id(self)])]
@@ -682,13 +690,14 @@ class nfa(dict):
           ...
         ValueError: input cannot contain epsilon
         """
+        # pylint: disable=too-many-branches,no-member
         if not isinstance(string, (Iterable, reiter)):
             raise ValueError('input must be an iterable')
         string = reiter(string)
 
         # If the NFA represented by this instance has been compiled, attempt
         # to match the supplied string via the compiled transition table.
-        if hasattr(self, "_compiled") and self._compiled is not None: # pylint: disable=E1101
+        if hasattr(self, '_compiled') and self._compiled is not None:
             lengths = set() # Lengths of paths that led to an accepting state/node.
             ids_ = set([id(self)]) # Working set of states/nodes during multi-branch traversal.
 
@@ -696,7 +705,6 @@ class nfa(dict):
                 # Collect the list of subsequent states/nodes.
                 ids__ = set()
                 for id_ in ids_:
-                    # pylint: disable=E1101
                     if id_ in self._compiled and (not full or not string.has(_length)):
                         lengths.add(_length)
 
@@ -707,8 +715,8 @@ class nfa(dict):
 
                     # Check table for given symbol and current states/nodes.
                     for id_ in ids_:
-                        if (symbol, id_) in self._compiled: # pylint: disable=E1101
-                            ids__ |= set(self._compiled[(symbol, id_)]) # pylint: disable=E1101
+                        if (symbol, id_) in self._compiled:
+                            ids__ |= set(self._compiled[(symbol, id_)])
 
                     # No matching subsequent state/node exists.
                     if len(ids__) == 0:
@@ -718,7 +726,7 @@ class nfa(dict):
                     ids_ = ids__
                 except (StopIteration, IndexError):
                     # Accept longest match if terminal states/nodes found.
-                    if any(id_ in self._compiled for id_ in ids_): # pylint: disable=E1101
+                    if any(id_ in self._compiled for id_ in ids_):
                         return max(lengths)
 
                     return None if full else max(lengths, default=None)
@@ -835,18 +843,18 @@ class nfa(dict):
         def strs_(v):
             if isinstance(v, tuple):
                 return (
-                    '(' + (", ".join(str_(n) for n in v)) + ')'
+                    '(' + (', '.join(str_(n) for n in v)) + ')'
                     if len(v) != 1 else
                     '(' + str_(v[0]) + ',)'
                 )
             if isinstance(v, list):
-                return '[' + (", ".join(str_(n) for n in v)) + ']'
+                return '[' + (', '.join(str_(n) for n in v)) + ']'
             raise TypeError(
                 'values must be nfa instances or non-empty lists/tuples of nfa instances'
             )
 
         return prefix + 'nfa(' + (
-            ('{' + (", ".join([
+            ('{' + (', '.join([
                 repr(k) + ': ' + (str_ if isinstance(v, nfa) else strs_)(v)
                 for (k, v) in self.items()
             ])) + '}') if len(self) > 0 else ''
@@ -894,7 +902,7 @@ class nfa(dict):
         # Create a copy of this node.
         nfa_ = nfa()
         if hasattr(self, '_accept'):
-            setattr(nfa_, '_accept', self._accept) # pylint: disable=E1101
+            setattr(nfa_, '_accept', self._accept) # pylint: disable=no-member
         _memo[id(self)] = nfa_
         for symbol in self:
             if isinstance(self[symbol], nfa):
@@ -952,7 +960,7 @@ class epsilon:
         return 'epsilon'
 
 # Retain an alias for the class in scope so that doctests are executed.
-_epsilon = epsilon # pylint: disable=C0103
+_epsilon: type = epsilon
 
 # The exported symbol refers to the sole instance of the
 # epsilon transition label class.
@@ -966,5 +974,5 @@ Constant representing an *epsilon* transition when used as an edge label
 2
 """
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     doctest.testmod() # pragma: no cover
