@@ -5,9 +5,9 @@ of dictionaries (where dictionary instances serve as nodes, dictionary keys
 serve as edge labels, and dictionary values serve as edges).
 """
 from __future__ import annotations
-from typing import Sequence, Optional, Any
+from typing import Any, Optional, Sequence, Iterable
 import doctest
-from collections.abc import Iterable, Collection
+import collections.abc
 from reiter import reiter
 
 class nfa(dict):
@@ -145,7 +145,7 @@ class nfa(dict):
 
         # Ensure that type checking and other method invocations that may traverse
         # the NFA instance do not consume the argument (e.g., if it is an iterable).
-        if not isinstance(argument, Collection):
+        if not isinstance(argument, collections.abc.Collection):
             raise TypeError('argument must be a collection')
 
         # Ensure that it is possible to convert the argument to a dictionary using
@@ -249,10 +249,10 @@ class nfa(dict):
         setattr(nfa_, '_accept', not bool(self))
         return nfa_
 
-    def __mod__(self: nfa, argument: Any) -> Sequence[nfa]:
+    def __mod__(self: nfa, argument: Any) -> Iterable[nfa]:
         """
-        Return a list of zero or more :obj:`nfa` instances reachable using any
-        path that has exactly one transition labeled with the supplied argument
+        Return an iterable of zero or more :obj:`nfa` instances reachable using
+        any path that has exactly one transition labeled with the supplied argument
         (and any number of :obj:`epsilon` transitions). If the supplied argument
         is itself :obj:`epsilon`, then all states reachable via zero or more
         :obj:`epsilon` transitions are returned.
@@ -443,7 +443,7 @@ class nfa(dict):
 
     def states(self: nfa, argument: Any=None) -> Sequence[nfa]:
         """
-        Collect set of all states (*i.e.*, the corresponding :obj:`nfa` instances)
+        Return list of all states (*i.e.*, the corresponding :obj:`nfa` instances)
         reachable from this instance, or the set of states reachable via any *one*
         transition that has a label matching the supplied argument.
 
@@ -691,7 +691,7 @@ class nfa(dict):
         ValueError: input cannot contain epsilon
         """
         # pylint: disable=too-many-branches,no-member
-        if not isinstance(string, (Iterable, reiter)):
+        if not isinstance(string, (collections.abc.Iterable, reiter)):
             raise ValueError('input must be an iterable')
         string = reiter(string)
 

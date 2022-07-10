@@ -3,6 +3,8 @@ Test suite in which functional unit tests for matching, compilation, and
 conversion methods are applied to a sample of a bounded subset of all
 possible data structure instances.
 """
+from __future__ import annotations
+from typing import Sequence, Iterable
 from importlib import import_module
 from itertools import product, islice, chain, combinations
 from random import sample
@@ -28,14 +30,14 @@ class Test_namespace(TestCase):
         module = import_module('nfa.nfa')
         self.assertTrue(api_methods().issubset(module.__dict__.keys()))
 
-def powerset(iterable):
+def powerset(iterable: Iterable) -> Iterable:
     """
     Return iterable of all subsets of items in the input.
     """
     s = list(iterable)
     return chain.from_iterable(combinations(s, r) for r in range(len(s) + 1))
 
-def strs(alphabet, k):
+def strs(alphabet: Sequence[str], k: int) -> Iterable[str]:
     """
     Yield all strings of length at most ``k`` containing
     only the characters in the supplied alphabet of symbols.
@@ -44,7 +46,7 @@ def strs(alphabet, k):
         for s in product(*[alphabet]*i):
             yield s
 
-def nfas(alphabet):
+def nfas(alphabet: Sequence[str]) -> Iterable[nfa]:
     """
     Yield a sample of all NFAs for the supplied alphabet of symbols.
     """

@@ -39,10 +39,17 @@ The library can be imported in the usual way::
 
 Examples
 ^^^^^^^^
-This library makes it possible to concisely construct an NFA. In the example below, an NFA is defined in which transition labels are strings. It is then applied to an iterable of strings. This returns the length (as an integer) of the longest path that (1) traverses an ordered sequence of transitions whose labels match the sequence of symbols supplied as the argument and (2) terminates at an accepting state::
+
+.. |nfa| replace:: ``nfa``
+.. _nfa: https://nfa.readthedocs.io/en/3.1.0/_source/nfa.html#nfa.nfa.nfa
+
+This library makes it possible to concisely construct an NFA by using one or more instances of the |nfa|_ class. In the example below, an NFA is defined in which transition labels are strings.
 
     >>> from nfa import nfa
     >>> n = nfa({'a': nfa({'b': nfa({'c': nfa()})})})
+
+The |nfa|_ object can be applied to a sequence of symbols (represented as an iterable of transition labels). This returns the length (as an integer) of the longest path that (1) traverses an ordered sequence of the NFA's transitions whose labels match the sequence of symbols supplied as the argument and (2) terminates at an accepting state::
+
     >>> n(['a', 'b', 'c'])
     3
 
@@ -51,13 +58,22 @@ By default, an empty NFA object ``nfa()`` is an accepting state and a non-empty 
     >>> n(['a', 'b']) is None
     True
 
-To ensure that a state is not accepting, the built-in prefix operator ``-`` can be used::
+.. |neg| replace:: ``-``
+.. _neg: https://nfa.readthedocs.io/en/3.1.0/_source/nfa.html#nfa.nfa.nfa.__neg__
+
+To ensure that a state is not accepting (even if it is empty), the built-in prefix operator |neg|_ can be used::
 
     >>> n = nfa({'a': nfa({'b': nfa({'c': -nfa()})})})
     >>> n(['a', 'b', 'c']) is None
     True
 
-The prefix operator ``+`` yields an accepting state and the prefix operator ``~`` reverses whether a state is accepting::
+.. |pos| replace:: ``+``
+.. _pos: https://nfa.readthedocs.io/en/3.1.0/_source/nfa.html#nfa.nfa.nfa.__pos__
+
+.. |inv| replace:: ``~``
+.. _inv: https://nfa.readthedocs.io/en/3.1.0/_source/nfa.html#nfa.nfa.nfa.__invert__
+
+The prefix operator |pos|_ returns an accepting state and the prefix operator |inv|_ reverses whether a state is accepting::
 
     >>> n = nfa({'a': ~nfa({'b': +nfa({'c': nfa()})})})
     >>> n(['a'])
@@ -65,7 +81,10 @@ The prefix operator ``+`` yields an accepting state and the prefix operator ``~`
     >>> n(['a', 'b'])
     2
 
-Applying the built-in ``bool`` function to an ``nfa`` object returns a boolean value indicating whether that *that specific object* (and *not* the overall NFA within which it may be an individual state) is an accepting state::
+.. |bool| replace:: ``bool``
+.. _bool: https://docs.python.org/3/library/functions.html#bool
+
+Applying the built-in |bool|_ function to an |nfa|_ object returns a boolean value indicating whether *that specific object* (and *not* the overall NFA within which it may be an individual state) is an accepting state::
 
     >>> bool(n)
     False
@@ -74,7 +93,10 @@ Applying the built-in ``bool`` function to an ``nfa`` object returns a boolean v
     >>> bool(-nfa())
     False
 
-Epsilon transitions can be introduced using the ``epsilon`` object::
+.. |epsilon| replace:: ``epsilon``
+.. _epsilon: https://nfa.readthedocs.io/en/3.1.0/_source/nfa.html#nfa.nfa.epsilon
+
+Epsilon transitions can be introduced using the |epsilon|_ object::
 
     >>> from nfa import epsilon
     >>> n = nfa({'a': nfa({epsilon: nfa({'b': nfa({'c': nfa()})})})})
@@ -91,12 +113,15 @@ If the length of the longest path leading to an accepting state is desired (even
     >>> n(['a', 'b', 'c', 'd', 'e'], full=False)
     3
 
-It is possible to retrieve the set of all transition labels that are found in the overall NFA (note that this does not include instances of ``epsilon``)::
+It is possible to retrieve the set of all transition labels that are found in the overall NFA (note that this does not include instances of |epsilon|_)::
 
     >>> n.symbols()
     {'c', 'a', 'b'}
 
-Because the ``nfa`` class is derived from ``dict``, it supports all operators and methods that are supported by ``dict``. In particular, the state reachable from a given state via a transition that has a specific label can be retrieved by using index notation::
+.. |dict| replace:: ``dict``
+.. _dict: https://docs.python.org/3/library/stdtypes.html#dict
+
+Because the |nfa|_ class is derived from |dict|_, it supports all operators and methods that are supported by |dict|_. In particular, the state reachable from a given state via a transition that has a specific label can be retrieved by using index notation::
 
     >>> n.keys()
     dict_keys(['a'])
@@ -104,19 +129,23 @@ Because the ``nfa`` class is derived from ``dict``, it supports all operators an
     >>> m(['b', 'c'])
     2
 
-To retrieve the collection of *all* states that can be reached via paths that involve zero or more epsilon transitions (and no labeled transitions), the built-in infix operator ``%`` can be used (note that this also includes *all* intermediate states along the paths to the first labeled transitions)::
+.. |mod| replace:: ``%``
+.. _mod: https://nfa.readthedocs.io/en/3.1.0/_source/nfa.html#nfa.nfa.nfa.__mod__
+
+To retrieve the collection of *all* states that can be reached via paths that involve zero or more epsilon transitions (and no labeled transitions), the built-in infix operator |mod|_ can be used (note that this also includes *all* intermediate states along the paths to the first labeled transitions)::
 
     >>> b = nfa({epsilon: nfa({'b': nfa()})})
     >>> c = nfa({'c': nfa()})
     >>> n = nfa({epsilon: [b, c]})
-    >>> for s in (n % epsilon): print(s)
+    >>> for s in (n % epsilon):
+    ...     print(s)
     ...
     nfa({epsilon: [nfa({epsilon: nfa({'b': nfa()})}), nfa({'c': nfa()})]})
     nfa({epsilon: nfa({'b': nfa()})})
     nfa({'c': nfa()})
     nfa({'b': nfa()})
 
-Other methods make it possible to retrieve all the states found in an NFA, to compile an NFA (enabling more efficient processing of iterables), and to compile an NFA into a deterministic finite automaton (DFA). Descriptions and examples of these methods can be found in the documentation for the main library module.
+Other methods make it possible to `retrieve all the states found in an NFA <https://nfa.readthedocs.io/en/3.1.0/_source/nfa.html#nfa.nfa.nfa.states>`__, to `compile an NFA <https://nfa.readthedocs.io/en/3.1.0/_source/nfa.html#nfa.nfa.nfa.compile>`__ (enabling more efficient processing of iterables), and to `transform an NFA into a deterministic finite automaton (DFA) <https://nfa.readthedocs.io/en/3.1.0/_source/nfa.html#nfa.nfa.nfa.to_dfa>`__. Descriptions and examples of these methods can be found in the `documentation for the main library module <https://nfa.readthedocs.io/en/3.1.0/_source/nfa.html>`__.
 
 Development
 -----------
