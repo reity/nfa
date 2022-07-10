@@ -1,5 +1,5 @@
 """
-Pure-Python data structure derived from the built-in :class:`dict <dict>` type
+Pure-Python data structure derived from the built-in :obj:`dict` type
 that can represent nondeterministic finite automata (NFAs) as an ensemble
 of dictionaries (where dictionary instances serve as nodes, dictionary keys
 serve as edge labels, and dictionary values serve as edges).
@@ -915,7 +915,7 @@ class nfa(dict):
 class epsilon:
     """
     Singleton class for the epsilon transition label. Only a sole instance
-    of  this class is ever be created. Therefore, the symbol :obj:`epsilon`
+    of this class is ever be created. Therefore, the symbol ``epsilon``
     exported by this library is assigned the sole *instance* of this class.
     Thus, the exported object :obj:`epsilon` can be used in any context that
     expects a transition label.
@@ -959,11 +959,8 @@ class epsilon:
         """
         return 'epsilon'
 
-# Retain an alias for the class in scope so that doctests are executed.
-_epsilon: type = epsilon
-
-# The exported symbol refers to the sole instance of the
-# epsilon transition label class.
+# The exported symbol defined below refers to the sole object of the epsilon
+# transition label class that is defined above.
 epsilon = epsilon()
 """
 Constant representing an *epsilon* transition when used as an edge label
@@ -972,6 +969,19 @@ Constant representing an *epsilon* transition when used as an edge label
 >>> a = nfa({'a': nfa({epsilon: nfa({'b': nfa()})})})
 >>> a('ab')
 2
+
+This object is
+`hashable <https://docs.python.org/3/glossary.html#term-hashable>`__,
+is equivalent to itself, and can be converted into a string.
+
+>>> {epsilon, epsilon}
+{epsilon}
+>>> epsilon == epsilon
+True
+>>> str(epsilon)
+'epsilon'
+>>> epsilon is not None
+True
 """
 
 if __name__ == '__main__':
