@@ -43,7 +43,7 @@ Examples
 .. |nfa| replace:: ``nfa``
 .. _nfa: https://nfa.readthedocs.io/en/3.1.0/_source/nfa.html#nfa.nfa.nfa
 
-This library makes it possible to concisely construct an NFA by using one or more instances of the |nfa|_ class. In the example below, an NFA is defined in which transition labels are strings.
+This library makes it possible to concisely construct an NFA by using one or more instances of the |nfa|_ class. In the example below, an NFA is defined in which transition labels are strings::
 
     >>> from nfa import nfa
     >>> n = nfa({'a': nfa({'b': nfa({'c': nfa()})})})
